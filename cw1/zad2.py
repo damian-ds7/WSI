@@ -26,6 +26,24 @@ def draw_arrow(xi, gradient, max_x, dim1=0, dim2=1):
     )
 
 
+def draw_contour(f, max_x, plot_step, dimensionality=2, dim1=0, dim2=1):
+    x_arr = np.arange(-max_x, max_x, plot_step)
+    y_arr = np.arange(-max_x, max_x, plot_step)
+    X, Y = np.meshgrid(x_arr, y_arr)
+    Z = np.empty(X.shape)
+
+    for i in range(X.shape[0]):
+        for j in range(X.shape[1]):
+            xi = np.zeros(dimensionality)
+            xi[dim1] = X[i, j]
+            xi[dim2] = Y[i, j]
+            Z[i, j] = f(xi)
+
+    plt.contour(X, Y, Z, 20)
+    plt.xlim(-max_x, max_x)
+    plt.ylim(-max_x, max_x)
+
+
 def steepest_ascent(
     xi,
     f,
@@ -58,7 +76,7 @@ def steepest_ascent(
     direction = -1 if minimum else 1
     previous_xi = np.zeros_like(xi)
     first_iteration = True
-    iteration_limit = 1000
+    iteration_limit = 100
 
     while (
         np.linalg.norm(gradient) > epsilon1
@@ -95,21 +113,11 @@ def booth_optimum(plot_name=None):
     MAX_X = 10
     PLOT_STEP = 0.1
 
-    x_arr = np.arange(-MAX_X, MAX_X, PLOT_STEP)
-    y_arr = np.arange(-MAX_X, MAX_X, PLOT_STEP)
-    X, Y = np.meshgrid(x_arr, y_arr)
-    Z = np.empty(X.shape)
+    draw_contour(booth_function, MAX_X, PLOT_STEP)
 
-    for i in range(X.shape[0]):
-        for j in range(X.shape[1]):
-            Z[i, j] = booth_function(np.array([X[i, j], Y[i, j]]))
-
-    plt.contour(X, Y, Z, 20)
-    plt.xlim(-MAX_X, MAX_X)
-    plt.ylim(-MAX_X, MAX_X)
     steepest_ascent(
-        np.array([10, 10], dtype=float),
-        # np.random.uniform(-MAX_X, MAX_X, 2),
+        # np.array([10, 10], dtype=float),
+        np.random.uniform(-MAX_X, MAX_X, 2),
         booth_function,
         0.1,
         minimum=True,
@@ -149,21 +157,7 @@ def cec_optimum(
     MAX_X = 100
     PLOT_STEP = 1
 
-    x_arr = np.arange(-MAX_X, MAX_X, PLOT_STEP)
-    y_arr = np.arange(-MAX_X, MAX_X, PLOT_STEP)
-    X, Y = np.meshgrid(x_arr, y_arr)
-    Z = np.empty(X.shape)
-
-    for i in range(X.shape[0]):
-        for j in range(X.shape[1]):
-            xi = np.zeros(10)
-            xi[dim1] = X[i, j]
-            xi[dim2] = Y[i, j]
-            Z[i, j] = f(xi)
-
-    plt.contour(X, Y, Z, 20)
-    plt.xlim(-MAX_X, MAX_X)
-    plt.ylim(-MAX_X, MAX_X)
+    draw_contour(f, MAX_X, PLOT_STEP, dimensionality, dim1, dim2)
 
     steepest_ascent(
         # np.array([-80, -50, -30, 0, 0, 0, 0, 0, 0, 0], dtype=float),
@@ -197,7 +191,7 @@ def main():
 
     # print(steepest_ascent(np.random.uniform(-10, 10, 2), booth, 0.1, minimum=True))
     # booth_optimum()
-    print(cec_optimum(f1, 0.005, epsilon1=1e-6, epsilon2=1e-6, minimum=True))
+    print(cec_optimum(f1, 0.1, epsilon1=1e-6, epsilon2=1e-6, minimum=False))
 
 
 if __name__ == "__main__":
