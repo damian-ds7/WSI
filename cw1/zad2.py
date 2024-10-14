@@ -31,7 +31,8 @@ def steepest_ascent(
     f,
     beta,
     minimum=False,
-    epsilon=1e-6,
+    epsilon1=1e-6,
+    epsilon2=1e-6,
     draw_arrows=False,
     max_x=10,
     dim1=0,
@@ -43,7 +44,8 @@ def steepest_ascent(
     :param f: function to analyze
     :param beta: step size
     :key minimum: set True if searching for function minimum
-    :key epsilon: precision
+    :key epsilon1: precision for gradient norm
+    :key epsilon2: precision for xi norm
     :key draw_arrows: set True if you want to draw arrows over function plot
     :key max_x: inclusive bound [-max_x, max_x]
     :key dim1: the index of the first dimension against which the arrows are drawn
@@ -54,15 +56,28 @@ def steepest_ascent(
     grad_fct = grad(f)
     gradient = grad_fct(xi)
     direction = -1 if minimum else 1
+    previous_xi = np.zeros_like(xi)
+    first_iteration = True
+    iteration_limit = 1000
 
-    while np.linalg.norm(gradient) > epsilon:
-        gradient = np.clip(gradient, -max_x, max_x)
+    while (
+        np.linalg.norm(gradient) > epsilon1
+        and (first_iteration or np.linalg.norm(xi - previous_xi) > epsilon2)
+        and iteration_limit > 0
+    ):
+        first_iteration = False
+        gradient = (
+            gradient / np.linalg.norm(gradient) * min(np.linalg.norm(gradient), max_x)
+        )
+        previous_xi = xi.copy()
         if draw_arrows:
             draw_arrow(xi, gradient, max_x)
 
         xi += direction * gradient * beta
-        xi = np.clip(-max_x, max_x, xi)
+        xi = np.clip(xi, -max_x, max_x)
         gradient = grad_fct(xi)
+        print(xi)
+        iteration_limit -= 1
 
     return xi, round(f(xi), 6)
 
@@ -108,13 +123,27 @@ def booth_optimum(plot_name=None):
     plt.clf()
 
 
-def cec_optimum(f, dimensionality=10, dim1=0, dim2=1, plot_name=None):
+def cec_optimum(
+    f,
+    beta,
+    dimensionality=10,
+    dim1=0,
+    dim2=1,
+    epsilon1=1e-6,
+    epsilon2=1e-6,
+    minimum=False,
+    plot_name=None,
+):
     """
     Calculates and plots steps of steepest ascent method for chosen cec2017 function
     :param f: function to analyze
+    :param beta: step size
     :key dimensionality: number of dimensions over which the function is evaluated
     :key dim1: the index of the first dimension to plot the function against
     :key dim2: the index of the second dimension to plot the function against
+    :key epsilon1: precision for gradient norm
+    :key epsilon2: precision for xi norm
+    :key minimum: set True if searching for function minimum
     :key plot_name: file name to save plot, if no name is given plot will only be displayed
     """
     MAX_X = 100
@@ -137,13 +166,15 @@ def cec_optimum(f, dimensionality=10, dim1=0, dim2=1, plot_name=None):
     plt.ylim(-MAX_X, MAX_X)
 
     steepest_ascent(
-        np.zeros(10, dtype=float),
-        # np.random.uniform(-MAX_X, MAX_X, 10),
+        # np.array([-80, -50, -30, 0, 0, 0, 0, 0, 0, 0], dtype=float),
+        np.random.uniform(-MAX_X, MAX_X, 10),
         f,
-        1,
+        beta,
+        epsilon1=epsilon1,
+        epsilon2=epsilon2,
         max_x=MAX_X,
         draw_arrows=True,
-        minimum=True,
+        minimum=minimum,
         dim1=dim1,
         dim2=dim2,
     )
@@ -166,7 +197,7 @@ def main():
 
     # print(steepest_ascent(np.random.uniform(-10, 10, 2), booth, 0.1, minimum=True))
     # booth_optimum()
-    print(cec_optimum(f1))
+    print(cec_optimum(f1, 0.005, epsilon1=1e-6, epsilon2=1e-6, minimum=True))
 
 
 if __name__ == "__main__":
