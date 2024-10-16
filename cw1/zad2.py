@@ -15,14 +15,14 @@ def draw_arrow(xi, gradient, max_x, dim1=0, dim2=1):
     end_y = np.clip(end_y, -max_x, max_x)
 
     plt.arrow(
-        xi[dim1],
-        xi[dim2],
+        x,
+        y,
         end_x - x,
         end_y - y,
-        head_width=0.3,
-        head_length=0.3,
-        fc="red",
-        ec="red",
+        head_width=3,
+        head_length=3,
+        fc="k",
+        ec="k",
     )
 
 
@@ -40,6 +40,8 @@ def draw_contour(f, max_x, plot_step, dimensionality=2, dim1=0, dim2=1):
             Z[i, j] = f(xi)
 
     plt.contour(X, Y, Z, 20)
+    # plt.pcolormesh(X, Y, Z, cmap="viridis", shading="auto")
+    plt.colorbar(label="Function Value")
     plt.xlim(-max_x, max_x)
     plt.ylim(-max_x, max_x)
 
@@ -76,20 +78,17 @@ def steepest_ascent(
     direction = -1 if minimum else 1
     previous_xi = np.zeros_like(xi)
     first_iteration = True
-    iteration_limit = 100
-
+    iteration_limit = 500
     while (
         np.linalg.norm(gradient) > epsilon1
         and (first_iteration or np.linalg.norm(xi - previous_xi) > epsilon2)
         and iteration_limit > 0
     ):
         first_iteration = False
-        gradient = (
-            gradient / np.linalg.norm(gradient) * min(np.linalg.norm(gradient), max_x)
-        )
+        gradient = np.clip(gradient, -max_x, max_x)
         previous_xi = xi.copy()
         if draw_arrows:
-            draw_arrow(xi, gradient, max_x)
+            draw_arrow(xi, gradient, max_x, dim1, dim2)
 
         xi += direction * gradient * beta
         xi = np.clip(xi, -max_x, max_x)
@@ -140,6 +139,7 @@ def cec_optimum(
     epsilon1=1e-6,
     epsilon2=1e-6,
     minimum=False,
+    number_of_optimum=1,
     plot_name=None,
 ):
     """
@@ -152,6 +152,7 @@ def cec_optimum(
     :key epsilon1: precision for gradient norm
     :key epsilon2: precision for xi norm
     :key minimum: set True if searching for function minimum
+    :key number_of_optimum: number of optima to find and plot
     :key plot_name: file name to save plot, if no name is given plot will only be displayed
     """
     MAX_X = 100
@@ -159,19 +160,19 @@ def cec_optimum(
 
     draw_contour(f, MAX_X, PLOT_STEP, dimensionality, dim1, dim2)
 
-    steepest_ascent(
-        # np.array([-80, -50, -30, 0, 0, 0, 0, 0, 0, 0], dtype=float),
-        np.random.uniform(-MAX_X, MAX_X, 10),
-        f,
-        beta,
-        epsilon1=epsilon1,
-        epsilon2=epsilon2,
-        max_x=MAX_X,
-        draw_arrows=True,
-        minimum=minimum,
-        dim1=dim1,
-        dim2=dim2,
-    )
+    for _ in range(number_of_optimum):
+        steepest_ascent(
+            np.random.uniform(-MAX_X, MAX_X, 10),
+            f,
+            beta,
+            epsilon1=epsilon1,
+            epsilon2=epsilon2,
+            max_x=MAX_X,
+            draw_arrows=True,
+            minimum=minimum,
+            dim1=dim1,
+            dim2=dim2,
+        )
 
     if plot_name is None:
         plt.show()
@@ -191,7 +192,25 @@ def main():
 
     # print(steepest_ascent(np.random.uniform(-10, 10, 2), booth, 0.1, minimum=True))
     # booth_optimum()
-    print(cec_optimum(f1, 0.1, epsilon1=1e-6, epsilon2=1e-6, minimum=False))
+
+    # print(
+    #     cec_optimum(
+    #         f1, 0.5, epsilon1=1e-6, epsilon2=1e-6, minimum=False, number_of_optimum=5
+    #     )
+    # )
+
+    print(
+        cec_optimum(
+            f1, 0.05, epsilon1=1e-6, epsilon2=1e-6, minimum=True, number_of_optimum=1
+        )
+    )
+
+    # print(
+    #     cec_optimum(
+    #         f2, 0.1, epsilon1=1e-3, epsilon2=1e-3, minimum=False, dim1=3, dim2=9
+    #     )
+    # )
+    # draw_contour(f2, 100, 1, 10, 3, 9)
 
 
 if __name__ == "__main__":
