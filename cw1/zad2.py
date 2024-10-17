@@ -1,102 +1,137 @@
+from dataclasses import dataclass
 import numpy as np
 from cec2017.functions import f1, f2, f3
 from autograd import grad
 import matplotlib.pyplot as plt
 
 
-def draw_arrow(xi, gradient, max_x, dim1=0, dim2=1):
-    x, y = xi[dim1], xi[dim2]
-
-    # calculate end of the arrow and reduce to bounds
-    end_x = x + gradient[dim1]
-    end_y = y + gradient[dim2]
-
-    end_x = np.clip(end_x, -max_x, max_x)
-    end_y = np.clip(end_y, -max_x, max_x)
-
-    plt.arrow(
-        x,
-        y,
-        end_x - x,
-        end_y - y,
-        head_width=3,
-        head_length=3,
-        fc="k",
-        ec="k",
-    )
-
-
-def draw_contour(f, max_x, plot_step, dimensionality=2, dim1=0, dim2=1):
-    x_arr = np.arange(-max_x, max_x, plot_step)
-    y_arr = np.arange(-max_x, max_x, plot_step)
-    X, Y = np.meshgrid(x_arr, y_arr)
-    Z = np.empty(X.shape)
-
-    for i in range(X.shape[0]):
-        for j in range(X.shape[1]):
-            xi = np.zeros(dimensionality)
-            xi[dim1] = X[i, j]
-            xi[dim2] = Y[i, j]
-            Z[i, j] = f(xi)
-
-    plt.contour(X, Y, Z, 20)
-    # plt.pcolormesh(X, Y, Z, cmap="viridis", shading="auto")
-    plt.colorbar(label="Function Value")
-    plt.xlim(-max_x, max_x)
-    plt.ylim(-max_x, max_x)
-
-
-def steepest_ascent(
-    xi,
-    f,
-    beta,
-    minimum=False,
-    epsilon1=1e-6,
-    epsilon2=1e-6,
-    draw_arrows=False,
-    max_x=10,
-    dim1=0,
-    dim2=1,
-):
+@dataclass
+class OptimumSearch:
     """
-    Steepest ascent method
-    :param xi: starting point
+    Class for searching for the optimum of a function using the steepest ascent method
     :param f: function to analyze
-    :param beta: step size
-    :key minimum: set True if searching for function minimum
-    :key epsilon1: precision for gradient norm
-    :key epsilon2: precision for xi norm
-    :key draw_arrows: set True if you want to draw arrows over function plot
-    :key max_x: inclusive bound [-max_x, max_x]
-    :key dim1: the index of the first dimension against which the arrows are drawn
-    :key dim2: the index of the second dimension against which the arrows are drawn
-    :return: optimum
+    :param dimensionality: number of dimensions over which the function is evaluated
+    :param max_x: inclusive bound [-max_x, max_x]
+    :param epsilon: precision for gradient norm
     """
 
-    grad_fct = grad(f)
-    gradient = grad_fct(xi)
-    direction = -1 if minimum else 1
-    previous_xi = np.zeros_like(xi)
-    first_iteration = True
-    iteration_limit = 500
-    while (
-        np.linalg.norm(gradient) > epsilon1
-        and (first_iteration or np.linalg.norm(xi - previous_xi) > epsilon2)
-        and iteration_limit > 0
+    f: callable
+    dimensionality: int
+    max_x: int
+    epsilon: float = 1e-6
+
+    def __post_init__(self):
+        self.plot_step = self.max_x / 100
+
+    def _draw_contour(self, dim1=0, dim2=1):
+        x_arr = np.arange(-self.max_x, self.max_x, self.plot_step)
+        y_arr = np.arange(-self.max_x, self.max_x, self.plot_step)
+        X, Y = np.meshgrid(x_arr, y_arr)
+        Z = np.empty(X.shape)
+
+        for i in range(X.shape[0]):
+            for j in range(X.shape[1]):
+                xi = np.zeros(self.dimensionality)
+                xi[dim1] = X[i, j]
+                xi[dim2] = Y[i, j]
+                Z[i, j] = self.f(xi)
+
+        plt.contour(X, Y, Z, 20)
+        plt.colorbar(label="Function Value")
+        plt.xlim(-self.max_x, self.max_x)
+        plt.ylim(-self.max_x, self.max_x)
+
+    def _draw_arrow(self, point_1, point_2, dim_1=0, dim_2=1):
+        x, y = point_1[dim_1], point_1[dim_2]
+        end_x, end_y = point_2[dim_1], point_2[dim_2]
+
+        head_width = self.max_x / 100
+        head_width += 0.75 * head_width
+
+        head_length = self.max_x / 100
+        head_length += 0.75 * head_length
+
+        plt.arrow(
+            x,
+            y,
+            end_x - x,
+            end_y - y,
+            head_width=head_width,
+            head_length=head_length,
+            fc="k",
+            ec="k",
+        )
+
+    def _steepest_ascent(
+        self, xi, beta, maximum=True, dim_1=0, dim_2=1, draw_arrows=True
     ):
-        first_iteration = False
-        gradient = np.clip(gradient, -max_x, max_x)
-        previous_xi = xi.copy()
-        if draw_arrows:
-            draw_arrow(xi, gradient, max_x, dim1, dim2)
+        """
+        Steepest ascent method
+        :param xi: starting point
+        :param beta: step size
+        :key maximum: set True if searching for function maximum
+        :key dim_1: the index of the first dimension against which the plot is drawn
+        :key dim_2: the index of the second dimension against which the plot is drawn
+        :key draw_arrows: set True if you want to draw arrows over function plot showing the path
+        :return: optimum
+        """
 
-        xi += direction * gradient * beta
-        xi = np.clip(xi, -max_x, max_x)
-        gradient = grad_fct(xi)
-        print(xi)
-        iteration_limit -= 1
+        grad_f = grad(self.f)
+        gradient = grad_f(xi)
+        iteration_limit = 1000
 
-    return xi, round(f(xi), 6)
+        while np.linalg.norm(gradient) > self.epsilon and iteration_limit > 0:
+            if maximum:
+                gradient = -gradient
+
+            previous_xi = xi.copy()
+            xi -= gradient * beta
+            xi = np.clip(xi, -self.max_x, self.max_x)
+
+            self._draw_arrow(previous_xi, xi, dim_1, dim_2)
+
+            gradient = grad_f(xi)
+            print(xi)
+            iteration_limit -= 1
+
+        return xi, round(self.f(xi), 6)
+
+    def run(
+        self,
+        beta,
+        maximum=False,
+        dim_1=0,
+        dim_2=1,
+        tries=1,
+        plot_name=None,
+    ):
+        """
+        Steepest ascent method, starting point(s) are randomly generated
+        :param beta: step size
+        :key maximum: set True if searching for function maximum
+        :key dim_1: the index of the first dimension against which the plot is drawn
+        :key dim_2: the index of the second dimension against which the plot is drawn
+        :key tries: number of tries to find the optimum
+        :key plot_name: filename for the plot, if None then the plot is shown
+        :return: optimum
+        """
+
+        optima = []
+
+        self._draw_contour(dim_1, dim_2)
+
+        for xi in np.random.uniform(
+            -self.max_x, self.max_x, (tries, self.dimensionality)
+        ):
+            optima.append(self._steepest_ascent(xi, beta, maximum, dim_1, dim_2))
+
+        if plot_name is not None:
+            plt.savefig(plot_name)
+            plt.close()
+        else:
+            plt.show()
+
+        return optima
 
 
 def booth_function(x):
@@ -104,114 +139,17 @@ def booth_function(x):
     return (x1 + 2 * x2 - 7) ** 2 + (2 * x1 + x2 - 5) ** 2
 
 
-def booth_optimum(plot_name=None):
+def booth_optimum(tries=1, plot_name=None):
     """
     Calculates and plots steps of steepest ascent method for chosen cec2017 function
     :key plot_name: file name to save plot, if none given plot will only be displayed
     """
-    MAX_X = 10
-    PLOT_STEP = 0.1
 
-    draw_contour(booth_function, MAX_X, PLOT_STEP)
-
-    steepest_ascent(
-        # np.array([10, 10], dtype=float),
-        np.random.uniform(-MAX_X, MAX_X, 2),
-        booth_function,
-        0.1,
-        minimum=True,
-        draw_arrows=True,
-    )
-
-    if plot_name is None:
-        plt.show()
-    else:
-        plt.savefig(plot_name)
-    plt.clf()
-
-
-def cec_optimum(
-    f,
-    beta,
-    dimensionality=10,
-    dim1=0,
-    dim2=1,
-    epsilon1=1e-6,
-    epsilon2=1e-6,
-    minimum=False,
-    number_of_optimum=1,
-    plot_name=None,
-):
-    """
-    Calculates and plots steps of steepest ascent method for chosen cec2017 function
-    :param f: function to analyze
-    :param beta: step size
-    :key dimensionality: number of dimensions over which the function is evaluated
-    :key dim1: the index of the first dimension to plot the function against
-    :key dim2: the index of the second dimension to plot the function against
-    :key epsilon1: precision for gradient norm
-    :key epsilon2: precision for xi norm
-    :key minimum: set True if searching for function minimum
-    :key number_of_optimum: number of optima to find and plot
-    :key plot_name: file name to save plot, if no name is given plot will only be displayed
-    """
-    MAX_X = 100
-    PLOT_STEP = 1
-
-    draw_contour(f, MAX_X, PLOT_STEP, dimensionality, dim1, dim2)
-
-    for _ in range(number_of_optimum):
-        steepest_ascent(
-            np.random.uniform(-MAX_X, MAX_X, 10),
-            f,
-            beta,
-            epsilon1=epsilon1,
-            epsilon2=epsilon2,
-            max_x=MAX_X,
-            draw_arrows=True,
-            minimum=minimum,
-            dim1=dim1,
-            dim2=dim2,
-        )
-
-    if plot_name is None:
-        plt.show()
-    else:
-        plt.savefig(plot_name)
-    plt.clf()
-
-
-def main():
-    # UPPER_BOUND = 100
-    # DIMENSIONALITY = 2
-    # x = np.random.uniform(-UPPER_BOUND, UPPER_BOUND, size=DIMENSIONALITY)
-
-    # # wyznacz ocenę x
-    # q = f1(x)
-    # print("q(x) = %.6f" % q)
-
-    # print(steepest_ascent(np.random.uniform(-10, 10, 2), booth, 0.1, minimum=True))
-    # booth_optimum()
-
-    # print(
-    #     cec_optimum(
-    #         f1, 0.5, epsilon1=1e-6, epsilon2=1e-6, minimum=False, number_of_optimum=5
-    #     )
-    # )
-
-    print(
-        cec_optimum(
-            f1, 0.05, epsilon1=1e-6, epsilon2=1e-6, minimum=True, number_of_optimum=1
-        )
-    )
-
-    # print(
-    #     cec_optimum(
-    #         f2, 0.1, epsilon1=1e-3, epsilon2=1e-3, minimum=False, dim1=3, dim2=9
-    #     )
-    # )
-    # draw_contour(f2, 100, 1, 10, 3, 9)
+    opt_search = OptimumSearch(booth_function, 2, 10)
+    opt_search.run(0.01, plot_name=plot_name, tries=tries)
 
 
 if __name__ == "__main__":
-    main()
+    # booth_optimum()
+    cec_optimum = OptimumSearch(f1, 10, 100)
+    cec_optimum.run(1e-8, tries=5)
