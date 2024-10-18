@@ -3,6 +3,7 @@ import numpy as np
 from cec2017.functions import f1, f2, f3
 from autograd import grad
 import matplotlib.pyplot as plt
+from cycler import cycler
 
 
 @dataclass
@@ -22,8 +23,20 @@ class OptimumSearch:
 
     def __post_init__(self):
         self.plot_step = self.max_x / 100
+        self.color_cycler = cycler(
+            color=plt.rcParams["axes.prop_cycle"].by_key()["color"]
+        )
+        self.color_iter = iter(self.color_cycler)
+        self.color = None
 
-    def _draw_contour(self, dim1=0, dim2=1):
+    def _get_color(self):
+        try:
+            return next(self.color_iter)["color"]
+        except StopIteration:
+            self.color_iter = iter(self.color_cycler)
+            return next(self.color_iter)["color"]
+
+    def _draw_contour(self, dim_1=0, dim_2=1):
         x_arr = np.arange(-self.max_x, self.max_x, self.plot_step)
         y_arr = np.arange(-self.max_x, self.max_x, self.plot_step)
         X, Y = np.meshgrid(x_arr, y_arr)
@@ -32,12 +45,13 @@ class OptimumSearch:
         for i in range(X.shape[0]):
             for j in range(X.shape[1]):
                 xi = np.zeros(self.dimensionality)
-                xi[dim1] = X[i, j]
-                xi[dim2] = Y[i, j]
+                xi[dim_1] = X[i, j]
+                xi[dim_2] = Y[i, j]
                 Z[i, j] = self.f(xi)
 
         plt.contour(X, Y, Z, 20)
-        plt.colorbar(label="Function Value")
+        plt.xlabel(f"X{dim_1+1}")
+        plt.ylabel(f"X{dim_2+1}")
         plt.xlim(-self.max_x, self.max_x)
         plt.ylim(-self.max_x, self.max_x)
 
@@ -46,10 +60,10 @@ class OptimumSearch:
         end_x, end_y = point_2[dim_1], point_2[dim_2]
 
         head_width = self.max_x / 100
-        head_width += 0.75 * head_width
+        head_width += 0.9 * head_width
 
         head_length = self.max_x / 100
-        head_length += 0.75 * head_length
+        head_length += 0.9 * head_length
 
         plt.arrow(
             x,
@@ -58,8 +72,8 @@ class OptimumSearch:
             end_y - y,
             head_width=head_width,
             head_length=head_length,
-            fc="k",
-            ec="k",
+            fc=self.color,
+            ec=self.color,
         )
 
     def _steepest_ascent(
@@ -94,7 +108,7 @@ class OptimumSearch:
             print(xi)
             iteration_limit -= 1
 
-        return xi, round(self.f(xi), 6)
+        return xi, self.f(xi)
 
     def run(
         self,
@@ -116,22 +130,31 @@ class OptimumSearch:
         :return: optimum
         """
 
-        optima = []
+        plt.figure(figsize=(12, 5))
+        plt.subplots_adjust(right=0.5, left=0.08, top=0.95)
 
         self._draw_contour(dim_1, dim_2)
 
-        for xi in np.random.uniform(
-            -self.max_x, self.max_x, (tries, self.dimensionality)
+        for i, xi in enumerate(
+            np.random.uniform(-self.max_x, self.max_x, (tries, self.dimensionality))
         ):
-            optima.append(self._steepest_ascent(xi, beta, maximum, dim_1, dim_2))
+            self.color = self._get_color()
+            end_xi, optimum = self._steepest_ascent(xi, beta, maximum, dim_1, dim_2)
+
+            text = (
+                f"Beta: {beta} | "
+                f"Start: ({xi[dim_1]:.2f}, {xi[dim_2]:.2f}) | "
+                f"End: ({end_xi[dim_1]:.2f}, {end_xi[dim_2]:.2f}) | "
+                f"Optimum: {optimum:.2f}"
+            )
+
+            plt.figtext(0.51, 0.92 - (i * 0.05), text, ha="left", color=self.color)
 
         if plot_name is not None:
             plt.savefig(plot_name)
             plt.close()
         else:
             plt.show()
-
-        return optima
 
 
 def booth_function(x):
@@ -146,10 +169,10 @@ def booth_optimum(tries=1, plot_name=None):
     """
 
     opt_search = OptimumSearch(booth_function, 2, 10)
-    opt_search.run(0.01, plot_name=plot_name, tries=tries)
+    opt_search.run(0.05, plot_name=plot_name, tries=tries)
 
 
 if __name__ == "__main__":
     # booth_optimum()
     cec_optimum = OptimumSearch(f1, 10, 100)
-    cec_optimum.run(1e-8, tries=5)
+    cec_optimum.run(1e-8, tries=5, dim_1=3, dim_2=4)
