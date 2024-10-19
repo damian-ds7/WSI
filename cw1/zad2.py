@@ -19,7 +19,7 @@ class OptimumSearch:
     f: callable
     dimensionality: int
     max_x: int
-    epsilon: float = 1e-6
+    grad_epsilon: float = 1e-6
 
     def __post_init__(self):
         self.plot_step = self.max_x / 100
@@ -50,8 +50,8 @@ class OptimumSearch:
                 Z[i, j] = self.f(xi)
 
         plt.contour(X, Y, Z, 20)
-        plt.xlabel(f"X{dim_1+1}")
-        plt.ylabel(f"X{dim_2+1}")
+        plt.xlabel(f"X{dim_1}")
+        plt.ylabel(f"X{dim_2}")
         plt.xlim(-self.max_x, self.max_x)
         plt.ylim(-self.max_x, self.max_x)
 
@@ -77,22 +77,19 @@ class OptimumSearch:
         )
 
     def _steepest_ascent(
-        self, xi, beta, maximum=True, dim_1=0, dim_2=1, draw_arrows=True
+        self,
+        xi,
+        beta,
+        maximum=True,
+        dim_1=0,
+        dim_2=1,
+        draw_arrows=True,
+        iteration_limit=None,
+        beta_increase=False,
     ):
-        """
-        Steepest ascent method
-        :param xi: starting point
-        :param beta: step size
-        :key maximum: set True if searching for function maximum
-        :key dim_1: the index of the first dimension against which the plot is drawn
-        :key dim_2: the index of the second dimension against which the plot is drawn
-        :key draw_arrows: set True if you want to draw arrows over function plot showing the path
-        :return: optimum
-        """
-
         grad_f = grad(self.f)
         gradient = grad_f(xi)
-        iteration_limit = 1000
+        iteration_count = 0
 
         while np.linalg.norm(gradient) > self.epsilon and iteration_limit > 0:
             if maximum:
@@ -104,6 +101,7 @@ class OptimumSearch:
 
             self._draw_arrow(previous_xi, xi, dim_1, dim_2)
 
+            previous_gradient = gradient.copy()
             gradient = grad_f(xi)
             print(xi)
             iteration_limit -= 1
@@ -117,7 +115,10 @@ class OptimumSearch:
         dim_1=0,
         dim_2=1,
         tries=1,
+        xi=None,
         plot_name=None,
+        iteration_limit=None,
+        beta_increase=False,
     ):
         """
         Steepest ascent method, starting point(s) are randomly generated
@@ -126,23 +127,38 @@ class OptimumSearch:
         :key dim_1: the index of the first dimension against which the plot is drawn
         :key dim_2: the index of the second dimension against which the plot is drawn
         :key tries: number of tries to find the optimum
-        :key plot_name: filename for the plot, if None then the plot is shown
-        :return: optimum
+        :key xi: array of starting points with length equal to the number of tries, if None then random
+                 points are generated
+        :key plot_name: filename for the plot, if None then the plot is shown,
+                        file is saved in directory from which the script is run
+        :key iteration_limit: maximum number of iterations, no limit if set to None
+        :key beta_increase: set True if you want to use Barzilai-Borwein step size increase method
         """
 
-        plt.figure(figsize=(12, 5))
+        plt.figure(figsize=(13, 5))
         plt.subplots_adjust(right=0.5, left=0.08, top=0.95)
 
         self._draw_contour(dim_1, dim_2)
 
-        for i, xi in enumerate(
-            np.random.uniform(-self.max_x, self.max_x, (tries, self.dimensionality))
-        ):
+        if xi is None:
+            xi = np.random.uniform(
+                -self.max_x, self.max_x, (tries, self.dimensionality)
+            )
+
+        for i, xi in enumerate(xi):
             self.color = self._get_color()
-            end_xi, optimum = self._steepest_ascent(xi, beta, maximum, dim_1, dim_2)
+            end_xi, optimum = self._steepest_ascent(
+                xi.copy(),
+                beta,
+                maximum,
+                dim_1,
+                dim_2,
+                beta_increase=beta_increase,
+                iteration_limit=iteration_limit,
+            )
 
             text = (
-                f"Beta: {beta} | "
+                f"Starting Beta: {beta} | "
                 f"Start: ({xi[dim_1]:.2f}, {xi[dim_2]:.2f}) | "
                 f"End: ({end_xi[dim_1]:.2f}, {end_xi[dim_2]:.2f}) | "
                 f"Optimum: {optimum:.2f}"
@@ -155,6 +171,8 @@ class OptimumSearch:
             plt.close()
         else:
             plt.show()
+
+        self.color_iter = iter(self.color_cycler)
 
 
 def booth_function(x):
