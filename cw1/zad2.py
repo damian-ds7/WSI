@@ -13,7 +13,7 @@ class OptimumSearch:
     :param f: function to analyze
     :param dimensionality: number of dimensions over which the function is evaluated
     :param max_x: inclusive bound [-max_x, max_x]
-    :param epsilon: precision for gradient norm
+    :param grad_epsilon: precision for gradient norm
     """
 
     f: callable
@@ -91,7 +91,9 @@ class OptimumSearch:
         gradient = grad_f(xi)
         iteration_count = 0
 
-        while np.linalg.norm(gradient) > self.epsilon and iteration_limit > 0:
+        while np.linalg.norm(gradient) > self.grad_epsilon and (
+            iteration_limit is None or iteration_limit > iteration_count
+        ):
             if maximum:
                 gradient = -gradient
 
@@ -103,10 +105,25 @@ class OptimumSearch:
 
             previous_gradient = gradient.copy()
             gradient = grad_f(xi)
-            print(xi)
-            iteration_limit -= 1
+            iteration_count += 1
+
+            if beta_increase:
+                beta = self.bb_method_step_increase(
+                    xi, previous_xi, gradient, previous_gradient
+                )
+
+            # print(xi)
+
+        print(iteration_count)
 
         return xi, self.f(xi)
+
+    @staticmethod
+    def bb_method_step_increase(xi, previous_xi, gradient, previous_gradient):
+        gradient_delta = gradient - previous_gradient
+        return (np.dot(xi - previous_xi, gradient_delta)) / np.dot(
+            gradient_delta, gradient_delta
+        )
 
     def run(
         self,
@@ -190,7 +207,109 @@ def booth_optimum(tries=1, plot_name=None):
     opt_search.run(0.05, plot_name=plot_name, tries=tries)
 
 
+def f1_optimum():
+    tries = 5
+    xi = np.random.uniform(-100, 100, (tries, 10))
+    cec_optimum = OptimumSearch(f1, 10, 100, grad_epsilon=1 + 8e-11)
+    # cec_optimum.run(
+    #     1e-8, tries=tries, xi=xi, dim_1=3, dim_2=4, plot_name="f1_min_x3x4.png"
+    # )
+    # cec_optimum.run(
+    #     1e-8, tries=tries, xi=xi, dim_1=0, dim_2=1, plot_name="f1_min_x0x1.png"
+    # )
+    cec_optimum.run(
+        1e-8,
+        tries=tries,
+        xi=xi,
+        dim_1=3,
+        dim_2=4,
+        plot_name="f1_min_x3x4_bb.png",
+        beta_increase=True,
+        iteration_limit=30000,
+    )
+    cec_optimum.run(
+        1e-8,
+        tries=tries,
+        xi=xi,
+        dim_1=0,
+        dim_2=1,
+        plot_name="f1_min_x0x1_bb.png",
+        beta_increase=True,
+        iteration_limit=30000,
+    )
+
+
+def f2_optimum():
+    tries = 5
+    xi = np.random.uniform(-100, 100, (tries, 10))
+    cec_optimum = OptimumSearch(f2, 10, 100, grad_epsilon=1 + 8e-11)
+
+    cec_optimum.run(
+        1e-27,
+        tries=tries,
+        xi=xi,
+        dim_1=0,
+        dim_2=1,
+        plot_name="f2_min_x0x1_bb.png",
+        iteration_limit=40000,
+        beta_increase=True,
+    )
+    cec_optimum.run(
+        1e-27,
+        tries=tries,
+        xi=xi,
+        dim_1=3,
+        dim_2=9,
+        plot_name="f2_min_x3x9_bb.png",
+        iteration_limit=40000,
+        beta_increase=True,
+    )
+
+    # try:
+    #     cec_optimum.run(
+    #         1e-20,
+    #         tries=tries,
+    #         xi=xi,
+    #         dim_1=3,
+    #         dim_2=9,
+    #         beta_increase=True,
+    #         iteration_limit=30000,
+    #     )
+    # except KeyboardInterrupt:
+    #     plt.show()
+
+
+def f3_optimum():
+    tries = 5
+    xi = np.random.uniform(-100, 100, (tries, 10))
+    cec_optimum = OptimumSearch(f3, 10, 100)
+    cec_optimum.run(
+        1e-20,
+        tries=tries,
+        xi=xi,
+        dim_1=0,
+        dim_2=1,
+        plot_name="f3_min_x0x1.png",
+        beta_increase=True,
+    )
+    cec_optimum.run(
+        1e-20,
+        tries=tries,
+        xi=xi,
+        dim_1=6,
+        dim_2=8,
+        plot_name="f3_min_x6x8.png",
+        beta_increase=True,
+    )
+
+    # cec_optimum.run(
+    #     1e-8, tries=tries, xi=xi, dim_1=3, dim_2=4, plot_name="f3_min_x3x4.png"
+    # )
+    # cec_optimum.run(1e-13, tries=tries, xi=xi, dim_1=0, dim_2=1, beta_increase=True)
+
+
 if __name__ == "__main__":
     # booth_optimum()
-    cec_optimum = OptimumSearch(f1, 10, 100)
-    cec_optimum.run(1e-8, tries=5, dim_1=3, dim_2=4)
+    # f1_optimum()
+    f2_optimum()
+    # f3_optimum()
