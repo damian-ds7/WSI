@@ -1,5 +1,6 @@
-import numpy as np
 import heapq
+
+import numpy as np
 
 
 def increment_bin_mask(mask, n):
