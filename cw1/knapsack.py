@@ -1,6 +1,6 @@
 import heapq
 import timeit
-from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import Pool
 
 import numpy as np
 import pandas as pd
@@ -61,6 +61,33 @@ def knapsack_heuristic(weights, values, M):
     return best_value, best_weight, "".join(map(str, taken_items))
 
 
+def run_simulation(element_count):
+    weights = np.random.randint(1, 1000, element_count)
+    M = np.sum(weights) / 2
+    values = np.random.randint(1, 2000, element_count)
+
+    time_h = timeit.timeit(lambda: knapsack_heuristic(weights, values, M), number=1)
+
+    time_bf = timeit.timeit(lambda: knapsack_brute_force(weights, values, M), number=1)
+
+    return time_h, time_bf
+
+
+def generate_table_files(filename, title, dataframe):
+    fig, ax = plt.subplots(figsize=(8, 1.3))
+    ax.axis("tight")
+    ax.axis("off")
+    ax.table(
+        cellText=dataframe.values,
+        colLabels=dataframe.columns,
+        cellLoc="center",
+        loc="center",
+    )
+    plt.title(title)
+    plt.savefig(f"tables/{filename}.png", bbox_inches="tight", dpi=300)
+    plt.clf()
+
+
 def create_tables(element_counts, tries):
     """
     Runs given heuristic and brute force knapsack methods and generates table files
@@ -69,35 +96,6 @@ def create_tables(element_counts, tries):
         element_counts: a list of different element times
         tries: number of times methods will be run for each element count
     """
-
-    def run_simulation(element_count):
-        weights = np.random.randint(1, 1000, element_count)
-        M = np.sum(weights) / 2
-        values = np.random.randint(1, 2000, element_count)
-
-        time_h = timeit.timeit(
-            lambda: knapsack_heuristic(weights, values, M), globals=locals(), number=1
-        )
-
-        time_bf = timeit.timeit(
-            lambda: knapsack_brute_force(weights, values, M), globals=locals(), number=1
-        )
-
-        return time_h, time_bf
-
-    def generate_table(filename, title, dataframe):
-        fig, ax = plt.subplots(figsize=(8, 1.3))
-        ax.axis("tight")
-        ax.axis("off")
-        ax.table(
-            cellText=dataframe.values,
-            colLabels=dataframe.columns,
-            cellLoc="center",
-            loc="center",
-        )
-        plt.title(title)
-        plt.savefig(f"tables/{filename}.png", bbox_inches="tight", dpi=300)
-        plt.clf()
 
     stats_h = {
         "l. elementów": element_counts,
@@ -118,43 +116,43 @@ def create_tables(element_counts, tries):
         times_h = []
         times_bf = []
 
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            futures = [
-                executor.submit(run_simulation, element_count) for _ in range(tries)
-            ]
-            for future in futures:
-                times_h.append(future.result()[0])
-                times_bf.append(future.result()[1])
+        with Pool(processes=10) as pool:
+            results = pool.map(run_simulation, [element_count] * tries)
+            for result in results:
+                times_h.append(result[0])
+                times_bf.append(result[1])
 
-        stats_h["min"].append(np.min(times_h))
-        stats_h["śr"].append(np.mean(times_h))
-        stats_h["std"].append(np.std(times_h))
-        stats_h["max"].append(np.max(times_h))
+        stats_h["min"].append(np.round(np.min(times_h), 6))
+        stats_h["śr"].append(np.round(np.mean(times_h), 6))
+        stats_h["std"].append(np.round(np.std(times_h), 6))
+        stats_h["max"].append(np.round(np.max(times_h), 6))
 
-        stats_bf["min"].append(np.min(times_bf))
-        stats_bf["śr"].append(np.mean(times_bf))
-        stats_bf["std"].append(np.std(times_bf))
-        stats_bf["max"].append(np.max(times_bf))
+        stats_bf["min"].append(np.round(np.min(times_bf), 6))
+        stats_bf["śr"].append(np.round(np.mean(times_bf), 6))
+        stats_bf["std"].append(np.round(np.std(times_bf), 6))
+        stats_bf["max"].append(np.round(np.max(times_bf), 6))
 
         print(f"finished {element_count}")
 
-    generate_table("heuristic_table", "Heurystyka", pd.DataFrame(data=stats_h))
-    generate_table("bruteforce_table", "Wyczerpujący", pd.DataFrame(data=stats_bf))
+    generate_table_files("heuristic_table", "Heurystyka", pd.DataFrame(data=stats_h))
+
+    generate_table_files(
+        "bruteforce_table", "Wyczerpujący", pd.DataFrame(data=stats_bf)
+    )
 
 
 if __name__ == "__main__":
-    # weights = np.array([8, 3, 5, 2]) #masa przedmiotów
-    # M = np.sum(weights)/2 #niech maksymalna masa plecaka będzie równa połowie masy przedmiotów
-    # values = np.array([16, 8, 9, 6]) #wartość przedmiotów
+    # # weights = np.array([8, 3, 5, 2]) #masa przedmiotów
+    # # M = np.sum(weights)/2 #niech maksymalna masa plecaka będzie równa połowie masy przedmiotów
+    # # values = np.array([16, 8, 9, 6]) #wartość przedmiotów
 
-    # print(knapsack_brute_force(weights, values, M))
-    # print(knapsack_heuristic(weights, values, M))
+    # # print(knapsack_brute_force(weights, values, M))
+    # # print(knapsack_heuristic(weights, values, M))
 
-    weights = np.random.randint(1, 1000, 25)
-    M = np.sum(weights) / 2
-    values = np.random.randint(1, 2000, 25)
+    # weights = np.random.randint(1, 1000, 25)
+    # M = np.sum(weights) / 2
+    # values = np.random.randint(1, 2000, 25)
 
-    print("{0:02f}s".format(timeit.timeit(lambda: knapsack_heuristic(weights, values, M), number=1)))
+    # print("{0:02f}s".format(timeit.timeit(lambda: knapsack_brute_force(weights, values, M), number=1)))
 
-
-    # create_tables([5, 10, 15, 20, 25], 30)
+    create_tables([5, 10, 15, 20, 25], 30)
