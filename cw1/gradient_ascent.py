@@ -118,8 +118,9 @@ class OptimumSearch:
                     xi, previous_xi, gradient, previous_gradient
                 )
 
-            if iteration_count % 1000 == 0:
-                print(xi)
+            # if iteration_count % 1000 == 0:
+            #     print(xi)
+
             iteration_count += 1
 
         return xi, self.f(xi), iteration_count
