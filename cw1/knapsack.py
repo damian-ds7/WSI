@@ -74,6 +74,7 @@ def run_simulation(element_count):
 
 
 def generate_table_files(filename, title, dataframe):
+    dataframe["l. elementów"] = dataframe["l. elementów"].astype(int)
     fig, ax = plt.subplots(figsize=(8, 1.3))
     ax.axis("tight")
     ax.axis("off")
@@ -86,6 +87,10 @@ def generate_table_files(filename, title, dataframe):
     plt.title(title)
     plt.savefig(f"tables/{filename}.png", bbox_inches="tight", dpi=300)
     plt.clf()
+
+
+def format_float_with_comma(value):
+    return f"{value:.6f}".replace(".", ",")
 
 
 def create_tables(element_counts, tries):
@@ -122,15 +127,15 @@ def create_tables(element_counts, tries):
                 times_h.append(result[0])
                 times_bf.append(result[1])
 
-        stats_h["min"].append(np.round(np.min(times_h), 6))
-        stats_h["śr"].append(np.round(np.mean(times_h), 6))
-        stats_h["std"].append(np.round(np.std(times_h), 6))
-        stats_h["max"].append(np.round(np.max(times_h), 6))
+        stats_h["min"].append(format_float_with_comma(np.min(times_h)))
+        stats_h["śr"].append(format_float_with_comma(np.mean(times_h)))
+        stats_h["std"].append(format_float_with_comma(np.std(times_h)))
+        stats_h["max"].append(format_float_with_comma(np.max(times_h)))
 
-        stats_bf["min"].append(np.round(np.min(times_bf), 6))
-        stats_bf["śr"].append(np.round(np.mean(times_bf), 6))
-        stats_bf["std"].append(np.round(np.std(times_bf), 6))
-        stats_bf["max"].append(np.round(np.max(times_bf), 6))
+        stats_bf["min"].append(format_float_with_comma(np.min(times_bf)))
+        stats_bf["śr"].append(format_float_with_comma(np.mean(times_bf)))
+        stats_bf["std"].append(format_float_with_comma(np.std(times_bf)))
+        stats_bf["max"].append(format_float_with_comma(np.max(times_bf)))
 
         print(f"finished {element_count}")
 
@@ -155,4 +160,4 @@ if __name__ == "__main__":
 
     # print("{0:02f}s".format(timeit.timeit(lambda: knapsack_brute_force(weights, values, M), number=1)))
 
-    create_tables([5, 10, 15, 20, 25], 30)
+    create_tables([5, 10, 15, 20, 25], 50)
