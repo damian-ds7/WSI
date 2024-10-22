@@ -211,16 +211,17 @@ def booth_function(x):
     return (x1 + 2 * x2 - 7) ** 2 + (2 * x1 + x2 - 5) ** 2
 
 
-def booth_optimum(tries=1, plot_name=None):
+def booth_optimum(beta, tries=1, plot_name=None):
     """
     Calculates and plots steps of steepest ascent method for chosen booth function
 
     Args:
+        beta: step size
         tries: number of to create and find optimum from. Defaults to 1.
         plot_name: file name to save plot, if none given plot will only be displayed. Defaults to None.
     """
     opt_search = OptimumSearch(booth_function, 2, 10)
-    opt_search.run(0.05, plot_name=plot_name, tries=tries)
+    opt_search.run(beta, plot_name=plot_name, tries=tries, iteration_limit=40000)
 
 
 def f1_optimum():
@@ -465,7 +466,10 @@ def f3_optimum():
 
 
 if __name__ == "__main__":
-    # booth_optimum()
+    # booth_optimum(0.01, tries=5, plot_name="plots/booth/booth_0,01.png")
+    # booth_optimum(0.05, tries=5, plot_name="plots/booth/booth_0,05.png")
+    booth_optimum(0.12, tries=5, plot_name="plots/booth/booth_oscillation.png")
+    # booth_optimum(0.11, tries=5, plot_name="plots/booth/booth_0,11.png")
     # f1_optimum()
     # f2_optimum()
-    f3_optimum()
+    # f3_optimum()
