@@ -1,6 +1,6 @@
 import heapq
-import timeit
-from multiprocessing import Pool
+import time
+from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 import pandas as pd
@@ -66,9 +66,17 @@ def run_simulation(element_count):
     M = np.sum(weights) / 2
     values = np.random.randint(1, 2000, element_count)
 
-    time_h = timeit.timeit(lambda: knapsack_heuristic(weights, values, M), number=1)
+    time_start = time.process_time()
+    knapsack_heuristic(weights, values, M)
+    time_end = time.process_time()
 
-    time_bf = timeit.timeit(lambda: knapsack_brute_force(weights, values, M), number=1)
+    time_h = time_end - time_start
+
+    time_start = time.process_time()
+    knapsack_brute_force(weights, values, M)
+    time_end = time.process_time()
+
+    time_bf = time_end - time_start
 
     return time_h, time_bf
 
@@ -121,11 +129,13 @@ def create_tables(element_counts, tries):
         times_h = []
         times_bf = []
 
-        with Pool(processes=10) as pool:
-            results = pool.map(run_simulation, [element_count] * tries)
-            for result in results:
-                times_h.append(result[0])
-                times_bf.append(result[1])
+        with ProcessPoolExecutor(max_workers=3) as executor:
+            futures = [
+                executor.submit(run_simulation, element_count) for _ in range(tries)
+            ]
+            for future in futures:
+                times_h.append(future.result()[0])
+                times_bf.append(future.result()[1])
 
         stats_h["min"].append(format_float_with_comma(np.min(times_h)))
         stats_h["śr"].append(format_float_with_comma(np.mean(times_h)))
