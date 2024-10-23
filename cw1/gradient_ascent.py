@@ -6,6 +6,12 @@ import numpy as np
 from autograd import grad
 from cec2017.functions import f1, f2, f3
 
+ITERATION_LIMIT = 40000
+
+
+def format_float_with_comma(value):
+    return f"{value:.2f}".replace(".", ",")
+
 
 @dataclass
 class OptimumSearch:
@@ -126,15 +132,23 @@ class OptimumSearch:
         return xi, self.f(xi), iteration_count
 
     @staticmethod
-    def bb_method_step_increase(xi, previous_xi, gradient, previous_gradient):
+    def bb_method_step_increase(
+        xi, previous_xi, gradient, previous_gradient, short=True
+    ):
         gradient_delta = gradient - previous_gradient
-        return (np.dot(xi - previous_xi, gradient_delta)) / np.dot(
-            gradient_delta, gradient_delta
-        )
+        point_delta = xi - previous_xi
+        if short:
+            return np.dot(point_delta, gradient_delta) / np.dot(
+                gradient_delta, gradient_delta
+            )
+        else:
+            return np.dot(point_delta, point_delta) / np.dot(
+                point_delta, gradient_delta
+            )
 
     def run(
         self,
-        beta,
+        beta=0.1,
         maximum=False,
         dim_1=0,
         dim_2=1,
@@ -148,7 +162,7 @@ class OptimumSearch:
         Steepeset ascent method
 
         Args:
-            beta: step size
+            beta: step size. Defaults to 0.1.
             maximum: set True if searching for function maximum. Defaults to False.
             dim_1: _descrithe index of the first dimension against which the plot is drawn. Defaults to 0.
             dim_2: the index of the second dimension against which the plot is drawn. Defaults to 1.
@@ -171,7 +185,7 @@ class OptimumSearch:
                 -self.max_x, self.max_x, (tries, self.dimensionality)
             )
 
-        def run_iteration(i, xi):
+        def start_ascent(i, xi):
             color = self.colors[i]
             end_xi, optimum, iteration_count = self._steepest_ascent(
                 xi.copy(),
@@ -185,17 +199,17 @@ class OptimumSearch:
             )
 
             text = (
-                f"Starting Beta: {beta} | "
-                f"Start: ({xi[dim_1]:.2f}, {xi[dim_2]:.2f}) | "
-                f"End: ({end_xi[dim_1]:.2f}, {end_xi[dim_2]:.2f}) | "
-                f"Optimum: {optimum:.2f}"
+                f"Starting Beta: {beta:.2e} | "
+                f"Start: ({format_float_with_comma(xi[dim_1])}; {format_float_with_comma(xi[dim_2])}) | "
+                f"End: ({format_float_with_comma(end_xi[dim_1])}; {format_float_with_comma(end_xi[dim_2])}) | "
+                f"Optimum: {format_float_with_comma(optimum)}"
             )
 
             plt.figtext(0.51, 0.92 - (i * 0.05), text, ha="left", color=color)
-            return f"Finishied point {i+1} with {iteration_count} iterations ({beta}{" beta increase" if beta_increase else ""})"
+            return f"Finishied point {i+1} with {iteration_count} iterations ({beta:.2e}{" beta increase" if beta_increase else ""})"
 
-        with ThreadPoolExecutor(max_workers=tries) as executor:
-            futures = [executor.submit(run_iteration, i, xi[i]) for i in range(tries)]
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = [executor.submit(start_ascent, i, xi[i]) for i in range(tries)]
             for future in futures:
                 print(future.result())
 
@@ -220,256 +234,124 @@ def booth_optimum(beta, tries=1, plot_name=None):
         tries: number of to create and find optimum from. Defaults to 1.
         plot_name: file name to save plot, if none given plot will only be displayed. Defaults to None.
     """
+
+    print("booth")
+
     opt_search = OptimumSearch(booth_function, 2, 10)
-    opt_search.run(beta, plot_name=plot_name, tries=tries, iteration_limit=40000)
+    opt_search.run(
+        beta, plot_name=plot_name, tries=tries, iteration_limit=ITERATION_LIMIT
+    )
 
 
 def f1_optimum():
+    print("f1")
+
     tries = 5
+    dim_1 = 0
+    dim_2 = 1
+    beta_values = [1e-4, 1e-8, 1e-15]
+
     xi = np.random.uniform(-100, 100, (tries, 10))
     cec_optimum = OptimumSearch(f1, 10, 100, grad_epsilon=1 + 8e-11)
 
-    def part_1():
-        cec_optimum.run(
-            1e-8,
-            tries=tries,
-            xi=xi.copy(),
-            dim_1=3,
-            dim_2=4,
-            plot_name="plots/f1/f1_x3x4_1e-8.png",
-            iteration_limit=40000,
-        )
-        cec_optimum.run(
-            1e-8,
-            tries=tries,
-            xi=xi.copy(),
-            dim_1=0,
-            dim_2=1,
-            plot_name="plots/f1/f1_x0x1_1e-8.png",
-            iteration_limit=40000,
-        )
+    config = {
+        "tries": tries,
+        "dim_1": dim_1,
+        "dim_2": dim_2,
+        "iteration_limit": ITERATION_LIMIT,
+    }
 
-    def part_2():
+    for beta in beta_values:
         cec_optimum.run(
-            1e-8,
-            tries=tries,
+            beta,
             xi=xi.copy(),
-            dim_1=3,
-            dim_2=4,
-            plot_name="plots/f1/f1_x3x4_1e-8_bb.png",
+            **config,
+            plot_name=f"plots/f1/f1_x0x1_{beta}.png",
+        )
+        cec_optimum.run(
+            beta,
+            **config,
+            xi=xi.copy(),
+            plot_name=f"plots/f1/f1_x0x1_{beta}_bb.png",
             beta_increase=True,
-            iteration_limit=40000,
         )
-        cec_optimum.run(
-            1e-8,
-            tries=tries,
-            xi=xi.copy(),
-            dim_1=0,
-            dim_2=1,
-            plot_name="plots/f1/f1_x0x1_1e-8_bb.png",
-            beta_increase=True,
-            iteration_limit=40000,
-        )
-
-    def part_3():
-        cec_optimum.run(
-            1e-4,
-            tries=tries,
-            xi=xi.copy(),
-            dim_1=3,
-            dim_2=4,
-            plot_name="plots/f1/f1_x3x4_1e-4.png",
-            iteration_limit=40000,
-        )
-        cec_optimum.run(
-            1e-4,
-            tries=tries,
-            xi=xi.copy(),
-            dim_1=3,
-            dim_2=4,
-            plot_name="plots/f1/f1_x3x4_1e-4_bb.png",
-            beta_increase=True,
-            iteration_limit=40000,
-        )
-
-    def part_4():
-        cec_optimum.run(
-            1e-15,
-            tries=tries,
-            xi=xi.copy(),
-            dim_1=3,
-            dim_2=4,
-            plot_name="plots/f1/f1_x3x4_1e-15.png",
-            iteration_limit=40000,
-        )
-        cec_optimum.run(
-            1e-15,
-            tries=tries,
-            xi=xi.copy(),
-            dim_1=3,
-            dim_2=4,
-            plot_name="plots/f1/f1_x0x1_1e-15_bb.png",
-            beta_increase=True,
-            iteration_limit=40000,
-        )
-
-    part_1()
-    part_2()
-    part_3()
-    part_4()
 
 
 def f2_optimum():
+    print("f2")
+
     tries = 5
+    dim_1 = 3
+    dim_2 = 9
+    # beta_values = [1e-15, 1e-20, 1e-27]
+    beta_values = [1e-27]
+
     xi = np.random.uniform(-100, 100, (tries, 10))
     cec_optimum = OptimumSearch(f2, 10, 100, grad_epsilon=1 + 8e-11)
 
-    def part_1():
+    config = {
+        "tries": tries,
+        "dim_1": dim_1,
+        "dim_2": dim_2,
+        "iteration_limit": ITERATION_LIMIT,
+    }
+
+    for beta in beta_values:
+        # cec_optimum.run(
+        #     beta,
+        #     xi=xi.copy(),
+        #     **config,
+        #     plot_name=f"plots/f2/f2_x3x9_{beta}.png",
+        # )
         cec_optimum.run(
-            1e-20,
-            tries=tries,
+            beta,
+            **config,
             xi=xi.copy(),
-            dim_1=3,
-            dim_2=9,
-            plot_name="plots/f2/f2_x3x9_1e-20.png",
-            iteration_limit=40000,
-        )
-        cec_optimum.run(
-            1e-20,
-            tries=tries,
-            xi=xi.copy(),
-            dim_1=3,
-            dim_2=9,
-            plot_name="plots/f2/f2_x3x9_1e-20_bb.png",
-            iteration_limit=40000,
+            plot_name=f"plots/f2/f2_x3x9_{beta}_bb.png",
             beta_increase=True,
         )
-
-    def part_2():
-        cec_optimum.run(
-            1e-27,
-            tries=tries,
-            xi=xi.copy(),
-            dim_1=3,
-            dim_2=9,
-            plot_name="plots/f2/f2_x3x9_1e-27.png",
-            iteration_limit=40000,
-        )
-        cec_optimum.run(
-            1e-27,
-            tries=tries,
-            xi=xi.copy(),
-            dim_1=3,
-            dim_2=9,
-            plot_name="plots/f2/f2_x3x9_1e-27_bb.png",
-            iteration_limit=40000,
-            beta_increase=True,
-        )
-
-    def part_3():
-        cec_optimum.run(
-            1e-15,
-            tries=tries,
-            xi=xi.copy(),
-            dim_1=3,
-            dim_2=9,
-            plot_name="plots/f2/f2_x3x9_1e-15.png",
-            iteration_limit=40000,
-        )
-        cec_optimum.run(
-            1e-15,
-            tries=tries,
-            xi=xi.copy(),
-            dim_1=3,
-            dim_2=9,
-            plot_name="plots/f2/f2_x3x9_1e-15_bb.png",
-            iteration_limit=40000,
-            beta_increase=True,
-        )
-
-    part_1()
-    part_2()
-    part_3()
 
 
 def f3_optimum():
+    print("f3")
+
     tries = 5
+    dim_1 = 6
+    dim_2 = 8
+    beta_values = [1e-5, 1e-10, 1e-15, 1e-20]
+
     xi = np.random.uniform(-100, 100, (tries, 10))
     cec_optimum = OptimumSearch(f3, 10, 100, grad_epsilon=1 + 8e-11)
 
-    def part_1():
-        cec_optimum.run(
-            1e-20,
-            tries=tries,
-            xi=xi.copy(),
-            dim_1=6,
-            dim_2=8,
-            plot_name="plots/f3/f3_x6x8_1e-20.png",
-            iteration_limit=40000,
-        )
-        cec_optimum.run(
-            1e-20,
-            tries=tries,
-            xi=xi.copy(),
-            dim_1=6,
-            dim_2=8,
-            plot_name="plots/f3/f3_x6x8_1e-20_bb.png",
-            beta_increase=True,
-            iteration_limit=40000,
-        )
+    config = {
+        "tries": tries,
+        "dim_1": dim_1,
+        "dim_2": dim_2,
+        "iteration_limit": ITERATION_LIMIT,
+    }
 
-    def part_2():
+    for beta in beta_values:
         cec_optimum.run(
-            1e-15,
-            tries=tries,
+            beta,
             xi=xi.copy(),
-            dim_1=6,
-            dim_2=8,
-            plot_name="plots/f3/f3_x6x8_1e-15.png",
-            iteration_limit=40000,
+            **config,
+            plot_name=f"plots/f3/f3_x6x8_{beta}.png",
         )
         cec_optimum.run(
-            1e-15,
-            tries=tries,
+            beta,
+            **config,
             xi=xi.copy(),
-            dim_1=6,
-            dim_2=8,
-            plot_name="plots/f3/f3_x6x8_1e-15_bb.png",
+            plot_name=f"plots/f3/f3_x6x8_{beta}_bb.png",
             beta_increase=True,
-            iteration_limit=40000,
         )
-
-    def part_3():
-        cec_optimum.run(
-            1e-10,
-            tries=tries,
-            xi=xi.copy(),
-            dim_1=6,
-            dim_2=8,
-            plot_name="plots/f3/f3_x6x8_1e-10.png",
-            iteration_limit=40000,
-        )
-        cec_optimum.run(
-            1e-10,
-            tries=tries,
-            xi=xi.copy(),
-            dim_1=6,
-            dim_2=8,
-            plot_name="plots/f3/f3_x6x8_1e-10_bb.png",
-            beta_increase=True,
-            iteration_limit=40000,
-        )
-
-    part_1()
-    part_2()
-    part_3()
 
 
 if __name__ == "__main__":
     # booth_optimum(0.01, tries=5, plot_name="plots/booth/booth_0,01.png")
     # booth_optimum(0.05, tries=5, plot_name="plots/booth/booth_0,05.png")
-    booth_optimum(0.12, tries=5, plot_name="plots/booth/booth_oscillation.png")
+    # booth_optimum(0.1, tries=5, plot_name="plots/booth/booth_0,1.png")
+    # booth_optimum(0.12, tries=5, plot_name="plots/booth/booth_oscillation.png")
     # booth_optimum(0.11, tries=5, plot_name="plots/booth/booth_0,11.png")
-    # f1_optimum()
-    # f2_optimum()
     # f3_optimum()
+    f2_optimum()
+    # f1_optimum()
