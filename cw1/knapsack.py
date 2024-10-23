@@ -4,7 +4,6 @@ from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
 
 
 def increment_bin_mask(mask, n):
@@ -81,22 +80,6 @@ def run_simulation(element_count):
     return time_h, time_bf
 
 
-def generate_table_files(filename, title, dataframe):
-    dataframe["l. elementów"] = dataframe["l. elementów"].astype(int)
-    fig, ax = plt.subplots(figsize=(8, 1.3))
-    ax.axis("tight")
-    ax.axis("off")
-    ax.table(
-        cellText=dataframe.values,
-        colLabels=dataframe.columns,
-        cellLoc="center",
-        loc="center",
-    )
-    plt.title(title)
-    plt.savefig(f"tables/{filename}.png", bbox_inches="tight", dpi=300)
-    plt.clf()
-
-
 def format_float_with_comma(value):
     return f"{value:.6f}".replace(".", ",")
 
@@ -149,11 +132,8 @@ def create_tables(element_counts, tries):
 
         print(f"finished {element_count}")
 
-    generate_table_files("heuristic_table", "Heurystyka", pd.DataFrame(data=stats_h))
-
-    generate_table_files(
-        "bruteforce_table", "Wyczerpujący", pd.DataFrame(data=stats_bf)
-    )
+    pd.DataFrame(stats_h).to_csv("tables/heuristic.csv")
+    pd.DataFrame(stats_bf).to_csv("tables/bruteforce.csv")
 
 
 if __name__ == "__main__":
