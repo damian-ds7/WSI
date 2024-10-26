@@ -1,9 +1,12 @@
 import heapq
 import time
 from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+CURRENT_DIR = Path(__file__).parent
 
 
 def increment_bin_mask(mask, n):
@@ -132,8 +135,8 @@ def create_tables(element_counts, tries):
 
         print(f"finished {element_count}")
 
-    pd.DataFrame(stats_h).to_csv("tables/heuristic.csv")
-    pd.DataFrame(stats_bf).to_csv("tables/bruteforce.csv")
+    pd.DataFrame(stats_h).to_csv(CURRENT_DIR / "tables/heuristic.csv", index=False)
+    pd.DataFrame(stats_bf).to_csv(CURRENT_DIR / "tables/bruteforce.csv", index=False)
 
 
 if __name__ == "__main__":

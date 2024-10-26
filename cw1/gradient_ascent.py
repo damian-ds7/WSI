@@ -1,10 +1,16 @@
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 from autograd import grad
+
 from cec2017.functions import f1, f2, f3
+
+
+CURRENT_DIR = Path(__file__).parent
+
 
 ITERATION_LIMIT = 40000
 
@@ -214,7 +220,7 @@ class OptimumSearch:
                 print(future.result())
 
         if plot_name is not None:
-            plt.savefig(plot_name)
+            plt.savefig(CURRENT_DIR / plot_name)
             plt.close()
         else:
             plt.show()
@@ -283,8 +289,8 @@ def f2_optimum():
     tries = 5
     dim_1 = 3
     dim_2 = 9
-    # beta_values = [1e-15, 1e-20, 1e-27]
-    beta_values = [1e-27]
+    beta_values = [1e-15, 1e-20, 1e-27]
+    # beta_values = [1e-27]
 
     xi = np.random.uniform(-100, 100, (tries, 10))
     cec_optimum = OptimumSearch(f2, 10, 100, grad_epsilon=1 + 8e-11)
@@ -297,12 +303,12 @@ def f2_optimum():
     }
 
     for beta in beta_values:
-        # cec_optimum.run(
-        #     beta,
-        #     xi=xi.copy(),
-        #     **config,
-        #     plot_name=f"plots/f2/f2_x3x9_{beta}.png",
-        # )
+        cec_optimum.run(
+            beta,
+            xi=xi.copy(),
+            **config,
+            plot_name=f"plots/f2/f2_x3x9_{beta}.png",
+        )
         cec_optimum.run(
             beta,
             **config,
