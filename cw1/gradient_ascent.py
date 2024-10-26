@@ -1,10 +1,11 @@
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # type: ignore
 import numpy as np
-from autograd import grad
+from autograd import grad  # type: ignore
 
 from cec2017.functions import f1, f2, f3
 
@@ -31,7 +32,7 @@ class OptimumSearch:
         grad_epsilon: precision for gradient norm. Defaults to 1e-6.
     """
 
-    f: callable
+    f: Callable
     dimensionality: int
     max_x: int
     grad_epsilon: float = 1e-6

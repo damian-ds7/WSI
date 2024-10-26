@@ -4,7 +4,7 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
+import pandas as pd  # type: ignore
 
 CURRENT_DIR = Path(__file__).parent
 
