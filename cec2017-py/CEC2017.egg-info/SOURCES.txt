@@ -1,0 +1,17 @@
+LICENSE.txt
+MANIFEST.in
+README.md
+setup.py
+CEC2017.egg-info/PKG-INFO
+CEC2017.egg-info/SOURCES.txt
+CEC2017.egg-info/dependency_links.txt
+CEC2017.egg-info/top_level.txt
+cec2017/__init__.py
+cec2017/basic.py
+cec2017/composition.py
+cec2017/data.pkl
+cec2017/functions.py
+cec2017/hybrid.py
+cec2017/simple.py
+cec2017/transforms.py
+cec2017/utils.py
