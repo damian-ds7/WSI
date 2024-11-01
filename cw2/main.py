@@ -1,5 +1,6 @@
 import os
 from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
 from typing import Callable, Union
 
 import numpy as np
@@ -39,6 +40,10 @@ def run_simulation(
 
 def analyze_mu_impact(function: Callable, sigma: float, mu_list: list[int], tries: int):
     print(f"analyzing mu impact for {function.__name__}, sigma={sigma}")
+
+    table_dir: Path = TABLE_DIR / "mu_impact"
+    table_dir.mkdir(exist_ok=True)
+
     formatted_mu: list[str] = format_params(mu_list, "mu")
 
     stats_10k: dict[str, list] = {
@@ -82,14 +87,18 @@ def analyze_mu_impact(function: Callable, sigma: float, mu_list: list[int], trie
 
     filename: str = f"{function.__name__}_mu_impact_sigma_{sigma}"
 
-    pd.DataFrame(stats_10k).to_csv(TABLE_DIR / (filename + "_10k.csv"), index=False)
-    pd.DataFrame(stats_50k).to_csv(TABLE_DIR / (filename + "_50k.csv"), index=False)
+    pd.DataFrame(stats_10k).to_csv(table_dir / (filename + "_10k.csv"), index=False)
+    pd.DataFrame(stats_50k).to_csv(table_dir / (filename + "_50k.csv"), index=False)
 
 
 def analyze_sigma_impact(
     function: Callable, mu: int, sigma_list: list[float], tries: int
 ):
     print(f"analyzing sigma impact for {function.__name__}, mu={mu}")
+
+    table_dir: Path = TABLE_DIR / "sigma_impact"
+    table_dir.mkdir(exist_ok=True)
+
     formatted_sigma: list[str] = format_params(sigma_list, "sigma")
 
     stats_10k: dict[str, list] = {
@@ -133,18 +142,14 @@ def analyze_sigma_impact(
 
     filename: str = f"{function.__name__}_sigma_impact_mu_{mu}"
 
-    pd.DataFrame(stats_10k).to_csv(
-        TABLE_DIR / "csv" / (filename + "_10k.csv"), index=False
-    )
-    pd.DataFrame(stats_50k).to_csv(
-        TABLE_DIR / "csv" / (filename + "_50k.csv"), index=False
-    )
+    pd.DataFrame(stats_10k).to_csv(table_dir / (filename + "_10k.csv"), index=False)
+    pd.DataFrame(stats_50k).to_csv(table_dir / (filename + "_50k.csv"), index=False)
 
 
 def generate_mu_impact_data():
     sigma_list: list[float] = [0.5, 1.5, 3]
     mu_list: list[int] = [2**i for i in range(0, 7)]
-    tries: int = 300
+    tries: int = 100
     functions = [f2, f13]
 
     for f in functions:
@@ -153,9 +158,9 @@ def generate_mu_impact_data():
 
 
 def generate_sigma_impact_data():
-    mu_list: list[int] = [5, 10, 20]
+    mu_list: list[int] = [5, 20]
     sigma_list: list[float] = [i / 10 for i in range(5, 31, 5)]
-    tries: int = 300
+    tries: int = 100
     functions = [f2, f13]
 
     for f in functions:
@@ -164,8 +169,5 @@ def generate_sigma_impact_data():
 
 
 if __name__ == "__main__":
-    if not TABLE_DIR.exists():
-        TABLE_DIR.mkdir()
-
-    generate_mu_impact_data()
+    # generate_mu_impact_data()
     generate_sigma_impact_data()
