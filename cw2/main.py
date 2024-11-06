@@ -146,22 +146,17 @@ def analyze_sigma_impact(
     pd.DataFrame(stats_50k).to_csv(table_dir / (filename + "_50k.csv"), index=False)
 
 
-def generate_mu_impact_data():
-    sigma_list: list[float] = [0.5, 1.5, 3]
-    mu_list: list[int] = [2**i for i in range(0, 7)]
-    tries: int = 100
-    functions = [f2, f13]
-
+def generate_mu_impact_data(
+    sigma_list: list[float], mu_list: list[int], functions: list[Callable], tries: int
+):
     for f in functions:
         for sigma in sigma_list:
             analyze_mu_impact(f, sigma, mu_list, tries)
 
 
-def generate_sigma_impact_data():
-    mu_list: list[int] = [5, 20]
-    sigma_list: list[float] = [i / 10 for i in range(5, 31, 5)]
-    tries: int = 100
-    functions = [f2, f13]
+def generate_sigma_impact_data(
+    sigma_list: list[float], mu_list: list[int], functions: list[Callable], tries: int
+):
 
     for f in functions:
         for mu in mu_list:
@@ -169,5 +164,15 @@ def generate_sigma_impact_data():
 
 
 if __name__ == "__main__":
-    # generate_mu_impact_data()
-    generate_sigma_impact_data()
+    tries: int = 100
+    functions = [f2, f13]
+
+    mu_list: list[int] = [2**i for i in range(7)]
+    sigma_list: list[float] = [0.5, 1.5, 3]
+
+    generate_mu_impact_data([1.5], mu_list, [f13], tries)
+
+    mu_list: list[int] = [5, 20]
+    sigma_list: list[float] = [i / 10 for i in range(5, 31, 5)]
+
+    # generate_sigma_impact_data(sigma_list, mu_list, functions, tries)
