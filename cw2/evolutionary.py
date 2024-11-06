@@ -6,8 +6,6 @@ from numpy.typing import NDArray
 
 
 def selection(mu: int, values: NDArray[float]) -> NDArray[int]:
-    # indices: NDArray[int] = np.zeros(mu, dtype="int64")
-
     indices: NDArray[int] = np.random.randint(0, mu, (mu, 2))
 
     selected: NDArray[int] = np.where(
@@ -17,17 +15,6 @@ def selection(mu: int, values: NDArray[float]) -> NDArray[int]:
     )
 
     return selected
-
-    # for i in range(mu):
-    #     item_1, item_2 = np.random.randint(0, mu, size=2)
-
-    #     if values[item_1] >= values[item_2]:
-    #         indices[i] = item_2
-    #     else:
-    #         indices[i] = item_1
-
-    return indices
-
 
 def mutation(
     mu: int, sigma: float, population: NDArray[float]
