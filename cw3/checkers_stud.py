@@ -13,8 +13,8 @@ Należy napisać funkcje "minimax_a_b_recurr", "minimax_a_b" (która woła funkc
 Chętni mogą ulepszać mój kod (trzeba oznaczyć komentarzem co zostało zmienione), mogą również dodać obsługę bicia wielokrotnego i wymagania bicia. Mogą również wdrożyć reguły: https://en.wikipedia.org/wiki/Russian_draughts
 """
 
+import random
 from copy import deepcopy
-from time import sleep
 from typing import Callable
 
 import numpy as np
@@ -84,24 +84,174 @@ def basic_ev_func(board: "Board", is_black_turn: bool):
 
 
 # nagrody jak w wersji podstawowej + nagroda za stopień zwartości grupy
-def group_prize_ev_func(board: "Board", is_black_turn):
+def group_prize_ev_func(board: "Board", is_black_turn: bool):
     h = 0
-    # ToDo
+    king_val = 10
+    pawn_val = 1
+    group_bonus = 1
+
+    black_sum = 0
+    white_sum = 0
+
+    black_win = 0 if board.white_fig_left != 0 else -1
+    white_win = 0 if board.black_fig_left != 0 else 1
+
+    for row in range(BOARD_WIDTH):
+        for col in range((row + 1) % 2, BOARD_WIDTH, 2):
+            piece = board.board[row][col]
+            if piece.is_black():
+                black_sum -= pawn_val if not piece.is_king() else king_val
+
+                # Check for nearby black pieces
+                if row > 0 and col > 0 and board.board[row - 1][col - 1].is_black():
+                    black_sum -= group_bonus
+                if (
+                    row > 0
+                    and col < BOARD_WIDTH - 1
+                    and board.board[row - 1][col + 1].is_black()
+                ):
+                    black_sum -= group_bonus
+                if (
+                    row < BOARD_WIDTH - 1
+                    and col > 0
+                    and board.board[row + 1][col - 1].is_black()
+                ):
+                    black_sum -= group_bonus
+                if (
+                    row < BOARD_WIDTH - 1
+                    and col < BOARD_WIDTH - 1
+                    and board.board[row + 1][col + 1].is_black()
+                ):
+                    black_sum -= group_bonus
+
+                # Check if near the edge of the board
+                if row in [0, BOARD_WIDTH - 1] or col in [0, BOARD_WIDTH - 1]:
+                    black_sum -= group_bonus
+
+            elif piece.is_white():
+                white_sum += pawn_val if not piece.is_king() else king_val
+
+                # Check for nearby white pieces
+                if row > 0 and col > 0 and board.board[row - 1][col - 1].is_white():
+                    white_sum += group_bonus
+                if (
+                    row > 0
+                    and col < BOARD_WIDTH - 1
+                    and board.board[row - 1][col + 1].is_white()
+                ):
+                    white_sum += group_bonus
+                if (
+                    row < BOARD_WIDTH - 1
+                    and col > 0
+                    and board.board[row + 1][col - 1].is_white()
+                ):
+                    white_sum += group_bonus
+                if (
+                    row < BOARD_WIDTH - 1
+                    and col < BOARD_WIDTH - 1
+                    and board.board[row + 1][col + 1].is_white()
+                ):
+                    white_sum += group_bonus
+
+                # Check if near the edge of the board
+                if row in [0, BOARD_WIDTH - 1] or col in [0, BOARD_WIDTH - 1]:
+                    white_sum += group_bonus
+
+    if black_sum == 0:
+        white_win = 1
+    elif white_sum == 0:
+        black_win = -1
+
+    h = black_sum + white_sum + black_win * WON_PRIZE + white_win * WON_PRIZE
+
     return h
 
 
 # za każdy pion na własnej połowie planszy otrzymuje się 5 nagrody, na połowie przeciwnika 7, a za każdą damkę 10.
-def push_to_opp_half_ev_func(board: "Board", is_black_turn):
+def push_to_opp_half_ev_func(board: "Board", is_black_turn: bool):
     h = 0
-    # ToDo
+    king_val = 10
+    own_half_val = 5
+    opp_half_val = 7
+
+    black_sum = 0
+    white_sum = 0
+
+    black_win = 0 if board.white_fig_left != 0 else -1
+    white_win = 0 if board.black_fig_left != 0 else 1
+
+    for row in range(BOARD_WIDTH):
+        for col in range((row + 1) % 2, BOARD_WIDTH, 2):
+            piece = board.board[row][col]
+            if piece.is_black():
+                if row < BOARD_WIDTH // 2:
+                    black_sum -= own_half_val if not piece.is_king else king_val
+                else:
+                    black_sum -= opp_half_val if not piece.is_king else king_val
+
+            elif piece.is_white():
+                if row < BOARD_WIDTH // 2:
+                    white_sum += opp_half_val if not piece.is_king else king_val
+                else:
+                    white_sum += opp_half_val if not piece.is_king else king_val
+
+    if black_sum == 0:
+        white_win = 1
+    elif white_sum == 0:
+        black_win = -1
+
+    h = black_sum + white_sum + black_win * WON_PRIZE + white_win * WON_PRIZE
+
     return h
 
 
 # za każdy nasz pion otrzymuje się nagrodę w wysokości: (5 + numer wiersza, na którym stoi pion) (im jest bliżej wroga tym lepiej), a za każdą damkę dodtakowe: 10.
-def push_forward_ev_func(board: "Board", is_black_turn):
+def push_forward_ev_func(board: "Board", is_black_turn: bool):
     h = 0
-    # ToDo
+    king_val = 10
+    base_pawn_val = 5
+
+    black_sum = 0
+    white_sum = 0
+
+    black_win = 0 if board.white_fig_left != 0 else -1
+    white_win = 0 if board.black_fig_left != 0 else 1
+
+    for row in range(BOARD_WIDTH):
+        for col in range((row + 1) % 2, BOARD_WIDTH, 2):
+            piece = board.board[row][col]
+
+            if piece.is_black():
+                black_sum -= base_pawn_val + row
+                if piece.is_king:
+                    black_sum -= king_val
+
+            elif piece.is_white():
+                white_sum += base_pawn_val + abs(row - BOARD_WIDTH)
+                if piece.is_king:
+                    white_sum += king_val
+
+    if black_sum == 0:
+        white_win = 1
+    elif white_sum == 0:
+        black_win = -1
+
+    h = black_sum + white_sum + black_win * WON_PRIZE + white_win * WON_PRIZE
+
     return h
+
+
+def select_best_index(move_marks: list[int], comp_func: Callable):
+    """
+    Selects a random index from the ones with best value
+    """
+    if not move_marks:
+        return None
+
+    best_val = comp_func(move_marks)
+    best_indices = [i for i, value in enumerate(move_marks) if value == best_val]
+
+    return random.choice(best_indices)
 
 
 # f. called from main
@@ -123,9 +273,9 @@ def minimax_a_b(board: "Board", depth: int, plays_as_black: bool, ev_func: Calla
         )
 
     if plays_as_black:
-        best_index = min(range(len(moves_marks)), key=lambda i: moves_marks[i])
+        best_index = select_best_index(moves_marks, min)
     else:
-        best_index = max(range(len(moves_marks)), key=lambda i: moves_marks[i])
+        best_index = select_best_index(moves_marks, max)
 
     return possible_moves[best_index]
 
@@ -152,6 +302,7 @@ def minimax_a_b_recurr(
     if move_max:
         for move in possible_moves:
             new_board = deepcopy(board)
+            new_board.register_move(move)
             new_board.make_move(move)
             evl = minimax_a_b_recurr(new_board, depth - 1, False, a, b, ev_func)
             a = max(a, evl)
@@ -161,6 +312,7 @@ def minimax_a_b_recurr(
     else:
         for move in possible_moves:
             new_board = deepcopy(board)
+            new_board.register_move(move)
             new_board.make_move(move)
             evl = minimax_a_b_recurr(new_board, depth - 1, True, a, b, ev_func)
             b = min(b, evl)
@@ -299,6 +451,10 @@ class Board:
                 to_ret += str(self.board[row][col])
             to_ret += "\n"
         return to_ret
+
+    def __repr__(self) -> str:
+        """Added repr for easier debugging in vscode"""
+        return self.__str__()
 
     # useful only for debugging (set board according to given list of strings)
     def set(self, b):
@@ -623,6 +779,46 @@ class Game:
                 self.marked_row = row
 
 
+class Visualizer:
+    """
+    Added to handle vizualization easily for ai_vs_ai
+    """
+
+    def __init__(self, visualize: bool, board: Board):
+        self.visualize = visualize
+        if self.visualize:
+            self.window = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
+            self.clock = pygame.time.Clock()
+            self.game = Game(self.window, board)
+        else:
+            self.window = None
+            self.clock = None
+            self.game = None
+
+    def tick(self, fps: int):
+        if self.visualize:
+            self.clock.tick(fps)
+
+    def update(self):
+        if self.visualize:
+            self.game.update()
+
+    def handle_events(self):
+        if self.visualize:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return False
+        return True
+
+    def pump(self):
+        if self.visualize:
+            pygame.event.pump()
+
+    def quit(self):
+        if self.visualize:
+            pygame.quit()
+
+
 def main():
     deb_board = [
         "...b.b.b",
@@ -644,10 +840,10 @@ def main():
         clock.tick(FPS)
 
         if not game.board.white_turn:
-            move = minimax_a_b(game.board, MINIMAX_DEPTH, True, basic_ev_func)
-            # move = minimax_a_b( game.board, MINIMAX_DEPTH, True, push_forward_ev_func)
+            # move = minimax_a_b(game.board, MINIMAX_DEPTH, True, basic_ev_func)
+            move = minimax_a_b(game.board, MINIMAX_DEPTH, True, push_forward_ev_func)
             # move = minimax_a_b( game.board, MINIMAX_DEPTH, True, push_to_opp_half_ev_func)
-            # move = minimax_a_b( game.board, MINIMAX_DEPTH, True, group_prize_ev_func)
+            # move = minimax_a_b(game.board, MINIMAX_DEPTH, True, group_prize_ev_func)
 
             if move is not None:
                 game.board.make_move(move)
@@ -669,42 +865,40 @@ def main():
     pygame.quit()
 
 
-def ai_vs_ai():
-    deb_board = [
-        "........",
-        "W.....b.",
-        ".....b.b",
-        "..b.b.b.",
-        "...b.w..",
-        "b.b.....",
-        ".w.....w",
-        "w...w.w.",
-    ]
-
+# Added additional kwargs to make debugging and getting stats easier
+def ai_vs_ai(
+    ev_function: Callable = basic_ev_func,
+    extra_depth: int = 0,
+    visualize: bool = False,
+    print_moves: bool = False,
+):
     board = Board()
     is_running = True
 
-    board.set(deb_board)
-    board.white_turn = False
+    visualizer = Visualizer(visualize, board)
+
+    # board.set(deb_board)
+    # board.white_turn = False
 
     while is_running:
+        visualizer.tick(FPS)
+
         if board.white_turn:
-            col = "White"
+            color = "White"
             move = minimax_a_b(
                 board, MINIMAX_DEPTH, not board.white_turn, basic_ev_func
             )
         else:
-            col = "Black"
+            color = "Black"
+            visualizer.pump()
             move = minimax_a_b(
-                board, MINIMAX_DEPTH, not board.white_turn, basic_ev_func
+                board, MINIMAX_DEPTH + extra_depth, not board.white_turn, ev_function
             )
-            # move = minimax_a_b( board, MINIMAX_DEPTH, not board.white_turn, push_forward_ev_func)
-            # move = minimax_a_b( board, MINIMAX_DEPTH, not board.white_turn, push_to_opp_half_ev_func)
-            # move = minimax_a_b( board, MINIMAX_DEPTH, not board.white_turn, group_prize_ev_func)
 
         if move is not None:
             capture = "Capture" if move.captures else ""
-            print(col, move, capture)
+            if print_moves:
+                print(color, move, capture)
             board.register_move(move)
             board.make_move(move)
         else:
@@ -713,12 +907,33 @@ def ai_vs_ai():
             else:
                 board.white_won = True
             is_running = False
+
         if board.end():
             is_running = False
-    print("black_won:", board.black_won)
-    print("white_won:", board.white_won)
+
+        visualizer.handle_events()
+        visualizer.update()
+
+    # print("black_won:", board.black_won)
+    # print("white_won:", board.white_won)
     # if both won then it is a draw!
 
+    visualizer.quit()
 
-main()
-# ai_vs_ai()
+    result = [board.white_won, board.black_won]
+
+    if result[0] and result[1]:
+        print("Draw")
+    elif result[0]:
+        print("White")
+    else:
+        print("Black")
+    return result
+
+
+if __name__ == "__main__":
+    # main()
+    ai_vs_ai(visualize=True, ev_function=push_to_opp_half_ev_func)
+    # ai_vs_ai(group_prize_ev_func)
+    # ai_vs_ai(push_to_opp_half_ev_func)
+    # ai_vs_ai(push_forward_ev_func)
