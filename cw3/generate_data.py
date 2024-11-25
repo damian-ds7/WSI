@@ -70,7 +70,7 @@ def generate_ev_function_data():
 
 def generate_depth_data():
     tries = 100
-    extra_depths = [-1, 1, 2, 3]
+    extra_depths = [-2, -1, 0, 1, 2]
 
     plot_path = Path(__file__).parent / "plots"
     plot_path.mkdir(exist_ok=True)
