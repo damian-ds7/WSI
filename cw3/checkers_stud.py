@@ -62,8 +62,10 @@ def basic_ev_func(board: "Board", is_black_turn: bool):
     black_sum = 0
     white_sum = 0
 
-    black_win = 0 if board.white_fig_left != 0 else -1
-    white_win = 0 if board.black_fig_left != 0 else 1
+    if board.black_fig_left == 0:
+        return WON_PRIZE
+    elif board.white_fig_left == 0:
+        return -WON_PRIZE
 
     # board.board[row][col].is_black() - sprawdza czy to czarny kolor figury
     # board.board[row][col].is_white() - sprawdza czy to biały kolor figury
@@ -78,12 +80,7 @@ def basic_ev_func(board: "Board", is_black_turn: bool):
             elif piece.is_white():
                 white_sum += pawn_val if not piece.is_king() else king_val
 
-    if black_sum == 0:
-        white_win = 1
-    elif white_sum == 0:
-        black_win = -1
-
-    h = black_sum + white_sum + black_win * WON_PRIZE + white_win * WON_PRIZE
+    h = black_sum + white_sum
 
     return h
 
@@ -98,8 +95,10 @@ def group_prize_ev_func(board: "Board", is_black_turn: bool):
     black_sum = 0
     white_sum = 0
 
-    black_win = 0 if board.white_fig_left != 0 else -1
-    white_win = 0 if board.black_fig_left != 0 else 1
+    if board.black_fig_left == 0:
+        return WON_PRIZE
+    elif board.white_fig_left == 0:
+        return -WON_PRIZE
 
     for row in range(BOARD_WIDTH):
         for col in range((row + 1) % 2, BOARD_WIDTH, 2):
@@ -162,12 +161,7 @@ def group_prize_ev_func(board: "Board", is_black_turn: bool):
                 if row in [0, BOARD_WIDTH - 1] or col in [0, BOARD_WIDTH - 1]:
                     white_sum += group_bonus
 
-    if black_sum == 0:
-        white_win = 1
-    elif white_sum == 0:
-        black_win = -1
-
-    h = black_sum + white_sum + black_win * WON_PRIZE + white_win * WON_PRIZE
+    h = black_sum + white_sum
 
     return h
 
@@ -182,8 +176,10 @@ def push_to_opp_half_ev_func(board: "Board", is_black_turn: bool):
     black_sum = 0
     white_sum = 0
 
-    black_win = 0 if board.white_fig_left != 0 else -1
-    white_win = 0 if board.black_fig_left != 0 else 1
+    if board.black_fig_left == 0:
+        return WON_PRIZE
+    elif board.white_fig_left == 0:
+        return -WON_PRIZE
 
     for row in range(BOARD_WIDTH):
         for col in range((row + 1) % 2, BOARD_WIDTH, 2):
@@ -200,12 +196,7 @@ def push_to_opp_half_ev_func(board: "Board", is_black_turn: bool):
                 else:
                     white_sum += opp_half_val if not piece.is_king else king_val
 
-    if black_sum == 0:
-        white_win = 1
-    elif white_sum == 0:
-        black_win = -1
-
-    h = black_sum + white_sum + black_win * WON_PRIZE + white_win * WON_PRIZE
+    h = black_sum + white_sum
 
     return h
 
@@ -219,29 +210,28 @@ def push_forward_ev_func(board: "Board", is_black_turn: bool):
     black_sum = 0
     white_sum = 0
 
-    black_win = 0 if board.white_fig_left != 0 else -1
-    white_win = 0 if board.black_fig_left != 0 else 1
+    if board.black_fig_left == 0:
+        return WON_PRIZE
+    elif board.white_fig_left == 0:
+        return -WON_PRIZE
 
     for row in range(BOARD_WIDTH):
         for col in range((row + 1) % 2, BOARD_WIDTH, 2):
             piece = board.board[row][col]
 
             if piece.is_black():
-                black_sum -= base_pawn_val + row
                 if piece.is_king:
                     black_sum -= king_val
+                else:
+                    black_sum -= base_pawn_val + row
 
             elif piece.is_white():
-                white_sum += base_pawn_val + abs(row - BOARD_WIDTH)
                 if piece.is_king:
                     white_sum += king_val
+                else:
+                    white_sum += base_pawn_val + (BOARD_WIDTH - 1 - row)
 
-    if black_sum == 0:
-        white_win = 1
-    elif white_sum == 0:
-        black_win = -1
-
-    h = black_sum + white_sum + black_win * WON_PRIZE + white_win * WON_PRIZE
+    h = black_sum + white_sum
 
     return h
 
