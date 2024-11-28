@@ -1,6 +1,7 @@
 import os
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 from checkers_stud import (
@@ -13,11 +14,12 @@ from checkers_stud import (
 )
 from matplotlib import pyplot as plt
 
-num_workers = max(1, os.cpu_count() // 2)
+# num_workers = max(1, os.cpu_count() // 2)
+num_workers = 14
 
 
 def generate_ev_function_data():
-    tries = 100
+    tries = 50
     ev_functions = [
         basic_ev_func,
         group_prize_ev_func,
@@ -68,9 +70,9 @@ def generate_ev_function_data():
     plt.savefig(plot_path / "ev_func_impact.png")
 
 
-def generate_depth_data():
-    tries = 100
-    extra_depths = [-2, -1, 0, 1, 2]
+def generate_depth_data(ev_func: Callable):
+    tries = 50
+    extra_depths = [-2, -1, 0, 1]
 
     plot_path = Path(__file__).parent / "plots"
     plot_path.mkdir(exist_ok=True)
@@ -86,16 +88,18 @@ def generate_depth_data():
 
     for i, extra_depth in enumerate(extra_depths):
         print(f"Analyzing results for depth={MINIMAX_DEPTH + extra_depth}")
+        with ProcessPoolExecutor(max_workers=num_workers) as executor:
+            futures = [
+                executor.submit(ai_vs_ai, ev_func, extra_depth) for _ in range(tries)
+            ]
 
-        for j in range(tries):
-            result = ai_vs_ai(basic_ev_func, extra_depth=extra_depth, concurrent=True)
-
-            if result == [True, True]:
-                mid_count[i] += 1
-            elif result[0]:
-                bottom_count[i] += 1
-            else:
-                top_count[i] += 1
+            for future in futures:
+                if future.result() == [True, True]:
+                    mid_count[i] += 1
+                elif future.result()[0]:
+                    bottom_count[i] += 1
+                else:
+                    top_count[i] += 1
 
     plt.bar(x, bottom_count, label="Biały", color="b")
     plt.bar(x, mid_count, bottom=bottom_count, label="Remis", color="g")
@@ -112,9 +116,13 @@ def generate_depth_data():
     plt.legend()
 
     plt.xticks(x, categories)
-    plt.savefig(plot_path / "depth_impact.png")
+    plt.savefig(plot_path / f"depth_impact_{ev_func.__name__}.png")
+    plt.close()
 
 
 if __name__ == "__main__":
     # generate_ev_function_data()
-    generate_depth_data()
+    generate_depth_data(basic_ev_func)
+    generate_depth_data(group_prize_ev_func)
+    generate_depth_data(push_to_opp_half_ev_func)
+    generate_depth_data(push_forward_ev_func)
