@@ -15,9 +15,7 @@ Chętni mogą ulepszać mój kod (trzeba oznaczyć komentarzem co zostało zmien
 
 import os
 import random
-from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
-from time import sleep
 from typing import Callable
 
 import numpy as np
@@ -247,6 +245,7 @@ def select_best_index(move_marks: list[int], comp_func: Callable):
     best_indices = [i for i, value in enumerate(move_marks) if value == best_val]
 
     return random.choice(best_indices)
+    # return move_marks.index(best_val)
 
 
 # f. called from main
@@ -266,46 +265,6 @@ def minimax_a_b(board: "Board", depth: int, plays_as_black: bool, ev_func: Calla
                 board, depth, not plays_as_black, a, b, ev_func, [possible_move]
             )
         )
-
-    if plays_as_black:
-        best_index = select_best_index(moves_marks, min)
-    else:
-        best_index = select_best_index(moves_marks, max)
-
-    return possible_moves[best_index]
-
-
-# Added to calculate minimax with larger depth faster
-def minimax_a_b_concurrent(
-    board: "Board", depth: int, plays_as_black: bool, ev_func: Callable
-):
-    possible_moves = board.get_possible_moves(plays_as_black)
-    if len(possible_moves) == 0:
-        board.white_won = plays_as_black
-        board.is_running = False
-        return None
-
-    a = -np.inf
-    b = np.inf
-    moves_marks = [0] * len(possible_moves)
-
-    with ProcessPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = [
-            executor.submit(
-                minimax_a_b_recurr,
-                board,
-                depth,
-                not plays_as_black,
-                a,
-                b,
-                ev_func,
-                [possible_move],
-            )
-            for possible_move in possible_moves
-        ]
-
-        for i, future in enumerate(futures):
-            moves_marks[i] = future.result()
 
     if plays_as_black:
         best_index = select_best_index(moves_marks, min)
@@ -639,14 +598,15 @@ class Board:
         return pos_moves
 
     # detect draws
+    # reversed conditions because white is max
     def end(self):
         # stop if repeats
         if self.black_repeats and self.white_repeats:
             # who won
             ev = basic_ev_func(self, not self.white_turn)
-            if ev > 0:
+            if ev < 0:
                 self.black_won = True
-            elif ev < 0:
+            elif ev > 0:
                 self.white_won = True
             else:
                 self.black_won = True
@@ -852,28 +812,18 @@ class Visualizer:
             pygame.quit()
 
 
-def main(concurrent: bool = False):
+def main(ev_func: Callable):
     board = Board()
     window = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
     is_running = True
     clock = pygame.time.Clock()
     game = Game(window, board)
 
-    minimax_version = minimax_a_b if not concurrent else minimax_a_b_concurrent
-
     while is_running:
         clock.tick(FPS)
 
         if not game.board.white_turn:
-            # move = minimax_version(game.board, MINIMAX_DEPTH, True, basic_ev_func)
-            move = minimax_version(
-                game.board, MINIMAX_DEPTH, True, push_forward_ev_func
-            )
-            # move = minimax_version( game.board, MINIMAX_DEPTH, True, push_to_opp_half_ev_func)
-            # move = minimax_version(game.board, MINIMAX_DEPTH, True, group_prize_ev_func)
-
-            if concurrent:
-                sleep(0.75)
+            move = minimax_a_b(game.board, MINIMAX_DEPTH, True, ev_func)
 
             if move is not None:
                 game.board.make_move(move)
@@ -901,27 +851,38 @@ def ai_vs_ai(
     extra_depth: int = 0,
     visualize: bool = False,
     print_moves: bool = False,
-    concurrent: bool = False,
 ):
     board = Board()
     is_running = True
 
-    visualizer = Visualizer(visualize, board)
+    # deb_board = [
+    #     "........",
+    #     "..b...b.",
+    #     ".....w.W",
+    #     "b...W...",
+    #     "...B....",
+    #     "W.......",
+    #     "...B....",
+    #     "w......."
+    # ]
 
-    minimax_version = minimax_a_b if not concurrent else minimax_a_b_concurrent
+    # board.set(deb_board)
+    # board.white_turn=False
+
+    visualizer = Visualizer(visualize, board)
 
     while is_running:
         visualizer.tick(FPS)
 
         if board.white_turn:
             color = "White"
-            move = minimax_version(
+            move = minimax_a_b(
                 board, MINIMAX_DEPTH, not board.white_turn, basic_ev_func
             )
         else:
             color = "Black"
             visualizer.pump()
-            move = minimax_version(
+            move = minimax_a_b(
                 board, MINIMAX_DEPTH + extra_depth, not board.white_turn, ev_function
             )
 
@@ -962,10 +923,12 @@ def ai_vs_ai(
 
 
 if __name__ == "__main__":
-    # main()
-    ai_vs_ai(
-        visualize=False, ev_function=basic_ev_func, concurrent=False, print_moves=True
-    )
+    main(basic_ev_func)
+    # ai_vs_ai(
+    #     visualize=True,
+    #     ev_function=basic_ev_func,
+    #     print_moves=False,
+    # )
     # ai_vs_ai(group_prize_ev_func)
     # ai_vs_ai(push_to_opp_half_ev_func)
     # ai_vs_ai(push_forward_ev_func)
