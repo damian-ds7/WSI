@@ -14,8 +14,8 @@ class Id3:
     def entropy(y: pd.DataFrame) -> float:
         frequency: Counter[str] = Counter(y)
         total_instances: int = len(y)
-        return -sum(
-            (count / total_instances) * np.log(count / total_instances)
+        return -np.sum(
+            (count / total_instances) * np.log2(count / total_instances)
             for count in frequency.values()
         )
 
@@ -43,9 +43,6 @@ class Id3:
         parent_class: int = None,
     ) -> dict:
         tree = {}
-
-        if dataset is None:
-            dataset = self.dataset
 
         if attributes is None:
             attributes = np.array(dataset.columns)
@@ -78,7 +75,7 @@ class Id3:
             attributes = np.delete(attributes, best_attribute_index)
 
             for value in np.unique(dataset[best_attribute]):
-                subset = dataset.where(data[best_attribute] == value).dropna()
+                subset = dataset.where(dataset[best_attribute] == value).dropna()
                 subtree = self._id3(subset, target_index, attributes, parent_class)
                 tree[best_attribute][value] = subtree
 
