@@ -9,6 +9,7 @@ from numpy.typing import NDArray
 class Id3:
     def __init__(self) -> None:
         self.tree = None
+        self.most_common_class = None
 
     @staticmethod
     def entropy(y: pd.DataFrame) -> float:
@@ -84,6 +85,9 @@ class Id3:
     def train(self, dataset: pd.DataFrame, target_index: int) -> None:
         self.tree = self._id3(dataset, target_index)
 
+        targets = dataset[target_index]
+        self.most_common_class = Counter(targets).most_common()[0][0]
+
     def _predict(self, tree: dict, sample: pd.Series) -> str:
         if not isinstance(tree, dict):
             return tree
@@ -91,7 +95,7 @@ class Id3:
         root_attribute: str = list(tree.keys())[0]
         attribute_value = sample[root_attribute]
 
-        subtree = tree[root_attribute].get(attribute_value)
+        subtree = tree[root_attribute].get(attribute_value, self.most_common_class)
 
         if subtree is None:
             return None

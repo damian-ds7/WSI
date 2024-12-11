@@ -59,7 +59,6 @@ def generate_data(training_part: int, testing_part: int, data_filename: str):
     sample = id3.predict(sample)
 
     return calculate_accuracy(test_data, sample)
-    print(gen_mistake_matrix(test_data, sample, np.unique(sample[0])))
 
 
 if __name__ == "__main__":
