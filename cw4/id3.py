@@ -15,7 +15,7 @@ class Id3:
     def entropy(y: pd.DataFrame) -> float:
         frequency: Counter[str] = Counter(y)
         total_instances: int = len(y)
-        return -np.sum(
+        return -sum(
             (count / total_instances) * np.log2(count / total_instances)
             for count in frequency.values()
         )
@@ -32,7 +32,7 @@ class Id3:
             subset = dataset.where(dataset[current_attribute] == val)
             subset = subset.dropna()[target_attribute]
 
-            subset_entropy += count / np.sum(counts) * self.entropy(subset)
+            subset_entropy += count / sum(counts) * self.entropy(subset)
 
         return total_entropy - subset_entropy
 
@@ -126,14 +126,18 @@ if __name__ == "__main__":
     id3 = Id3()
     id3.train(data, 0)
 
-    random_rows = data.sample(n=1000, random_state=42)
-    sample = random_rows.drop(random_rows.columns[0], axis=1)
+    from pprint import pprint
 
-    sample = id3.predict(sample)
-    # print(sample)
+    pprint(id3.tree)
 
-    # print(random_rows)
+    # random_rows = data.sample(n=1000, random_state=42)
+    # sample = random_rows.drop(random_rows.columns[0], axis=1)
 
-    differences = random_rows.compare(sample)
+    # sample = id3.predict(sample)
+    # # print(sample)
 
-    print(differences)
+    # # print(random_rows)
+
+    # differences = random_rows.compare(sample)
+
+    # print(differences)
