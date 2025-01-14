@@ -1,0 +1,3 @@
+[submodule "neural_network"]
+	path = neural_network
+	url = https://github.com/damian-ds7/neural-network
