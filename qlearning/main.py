@@ -31,17 +31,6 @@ def negative_stagnation_hole(
         return -1
     return reward
 
-
-def boltzmann(qtable, state, temp):
-    q_values = qtable[state]
-
-    exp_values = np.exp(q_values / temp)
-    probabilities = exp_values / np.sum(exp_values)
-
-    action = np.random.choice(len(q_values), p=probabilities)
-    return action
-
-
 def run_qlearning(
     env: gym.Env,
     reward_strategy: Callable[[float, int, int, bool, bool], int],
@@ -116,10 +105,6 @@ def get_averaged(
         results = [future.result() for future in futures]
 
     return np.mean(results, axis=0)
-
-    # for _ in range(25):
-    #     run_qlearning(env, reward_strategy, episode_count, step_count)
-
 
 def generate_plot(
     filename: str,
